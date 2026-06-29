@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Electronic Shutter Simulation</title>
+
+<style>
+body{
+background:linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+.camera{
+width:520px;
+height:320px;
+margin:auto;
+margin-top:40px;
+background:#111;
+border:6px solid #333;
+border-radius:10px;
+overflow:hidden;
+position:relative;
+}
+
+/* SENSOR */
+#scene{
+position:absolute;
+width:120%;
+height:100%;
+background:linear-gradient(90deg,red,green,blue);
+animation:move 0s linear infinite;
+}
+
+/* 🔥 PIXEL GRID (YOUR REFERENCE APPLIED) */
+.gridOverlay{
+position:absolute;
+inset:0;
+pointer-events:none;
+background:
+linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+background-size:5px 5px;
+z-index:2;
+}
+
+/* SCAN */
+.scanline{
+position:absolute;
+width:100%;
+height:4px;
+background:white;
+opacity:0.6;
+top:-10px;
+z-index:3;
+}
+
+.counter{
+position:absolute;
+top:8px;
+right:10px;
+background:rgba(0,0,0,0.6);
+padding:4px 8px;
+font-size:14px;
+border-radius:4px;
+color:#00ffcc;
+font-weight:bold;
+z-index:4;
+}
+
+.mode{
+margin-top:15px;
+color:#ff4040;
+font-size:18px;
+}
+
+.controls{
+margin-top:15px;
+}
+
+button{
+background:#222;
+border:1px solid #555;
+color:white;
+padding:8px 14px;
+margin:5px;
+cursor:pointer;
+}
+
+button:hover{
+background:#444;
+}
+
+.sliderBox{
+margin-top:20px;
+}
+
+input[type=range]{
+width:350px;
+}
+
+@keyframes move{
+0%{transform:translateX(-40px)}
+100%{transform:translateX(40px)}
+}
+</style>
+</head>
+
+<body>
+
+<h2>Electronic Shutter Drive Simulator</h2>
+
+<div class="camera">
+
+<div id="scene"></div>
+
+<!-- ✅ UPDATED GRID -->
+<div class="gridOverlay"></div>
+
+<div class="scanline" id="scan"></div>
+<div class="counter" id="counter">0</div>
+
+</div>
+
+<div class="mode" id="modeText">Mode : SINGLE</div>
+
+<div class="sliderBox">
+<label>Shutter Speed: <span id="shutterLabel">1/1000</span></label><br>
+<input type="range" id="shutterSlider" min="0" max="15" value="10">
+</div>
+
+<div class="controls">
+<button onclick="setMode('single')">Single Shot</button>
+<button onclick="setMode('burst')">Burst Mode</button>
+<button onclick="setMode('hplus')">H+ Continuous</button>
+<button onclick="setMode('slow')">Slow Shutter</button>
+<button onclick="setMode('timer')">Timer</button>
+</div>
+
+<div class="controls">
+<button id="capture">CAPTURE</button>
+</div>
+
+<script>
+
+/* SHUTTER STEPS */
+const shutterSteps = [
+{label:"3s", value:3000},
+{label:"2s", value:2000},
+{label:"1s", value:1000},
+{label:"1/2", value:500},
+{label:"1/4", value:250},
+{label:"1/8", value:125},
+{label:"1/15", value:66},
+{label:"1/30", value:33},
+{label:"1/60", value:16},
+{label:"1/125", value:8},
+{label:"1/250", value:4},
+{label:"1/500", value:2},
+{label:"1/1000", value:1},
+{label:"1/2000", value:0.5},
+{label:"1/4000", value:0.25},
+{label:"1/8000", value:0.125}
+]
+
+let shutterSpeed = 1
+
+const slider = document.getElementById("shutterSlider")
+const label = document.getElementById("shutterLabel")
+
+function updateShutter(){
+let step = shutterSteps[slider.value]
+label.innerText = step.label
+shutterSpeed = step.value
+}
+
+slider.oninput = updateShutter
+updateShutter()
+
+/* VARIABLES */
+let mode="single"
+let shooting=false
+let lastFrameTime=0
+let targetFPS=0
+let shotCount=0
+const maxShots=40
+let resetTimeout=null
+
+const scan=document.getElementById("scan")
+const modeText=document.getElementById("modeText")
+const counter=document.getElementById("counter")
+const capture=document.getElementById("capture")
+
+function resetCounter(){
+shotCount=0
+counter.innerText="0"
+if(resetTimeout){
+clearTimeout(resetTimeout)
+resetTimeout=null
+}
+}
+
+function triggerReset(){
+if(resetTimeout) clearTimeout(resetTimeout)
+resetTimeout=setTimeout(()=>resetCounter(),1000)
+}
+
+function setMode(m){
+mode=m
+modeText.innerHTML="Mode : "+m.toUpperCase()
+resetCounter()
+}
+
+/* SCAN */
+function electronicScan(){
+
+scan.style.transition="none"
+scan.style.top="-10px"
+
+setTimeout(()=>{
+let visibleTime = Math.max(shutterSpeed, 60)
+scan.style.transition="top "+visibleTime+"ms linear"
+scan.style.top="320px"
+},10)
+}
+
+/* MODES */
+function singleShot(){
+resetCounter()
+electronicScan()
+shotCount=1
+counter.innerText=shotCount
+triggerReset()
+}
+
+function slowShot(){
+resetCounter()
+scan.style.transition="none"
+scan.style.top="-10px"
+
+setTimeout(()=>{
+scan.style.transition="top 3000ms linear"
+scan.style.top="320px"
+},10)
+
+shotCount=1
+counter.innerText=shotCount
+triggerReset()
+}
+
+function timerShot(){
+resetCounter()
+
+modeText.innerHTML="Timer : 3"
+setTimeout(()=>modeText.innerHTML="Timer : 2",1000)
+setTimeout(()=>modeText.innerHTML="Timer : 1",2000)
+
+setTimeout(()=>{
+modeText.innerHTML="Mode : TIMER"
+electronicScan()
+shotCount=1
+counter.innerText=shotCount
+triggerReset()
+},3000)
+}
+
+/* CONTINUOUS */
+function startContinuous(fps){
+resetCounter()
+targetFPS=fps
+shooting=true
+lastFrameTime=performance.now()
+requestAnimationFrame(loop)
+}
+
+function loop(currentTime){
+
+if(!shooting) return
+
+const interval=1000/targetFPS
+
+if(currentTime-lastFrameTime>=interval){
+
+if(shotCount>=maxShots){
+shooting=false
+triggerReset()
+return
+}
+
+electronicScan()
+shotCount++
+counter.innerText=shotCount
+
+lastFrameTime=currentTime
+}
+
+requestAnimationFrame(loop)
+}
+
+/* EVENTS */
+capture.onmousedown=()=>{
+if(mode==="burst") startContinuous(12)
+if(mode==="hplus") startContinuous(40)
+}
+
+capture.onmouseup=()=>{
+shooting=false
+}
+
+capture.onclick=()=>{
+if(mode==="single") singleShot()
+if(mode==="slow") slowShot()
+if(mode==="timer") timerShot()
+}
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

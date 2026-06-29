@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Camera Simulation Hub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+    color: white;
+}
+
+header {
+    background: #b30000;
+    padding: 20px;
+    text-align: center;
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 30px;
+}
+
+.card {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: scale(1.05);
+    border-color: #ff3b3b;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #ff3b3b;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #ff1f1f;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+📷 Camera & ISP Simulation Control Hub
+</header>
+
+<div class="container">
+	<div class="card">
+        <h3> Aperture</h3>
+        <button onclick="openPage('Perfect Aperture.html')">Open</button>
+    </div>
+	<div class="card">
+        <h3>Shutter Types</h3>
+        <button onclick="openPage('Camera_Shutter_Type.html')">Open</button>
+    </div>
+	 <div class="card">
+        <h3>Electronic Shutter Mode</h3>
+        <button onclick="openPage('Electronic_Shutter_Mode.html')">Open</button>
+    </div>
+	<div class="card">
+        <h3>ISO Simulator</h3>
+        <button onclick="openPage('ISO.html')">Open</button>
+    </div>
+    <div class="card">
+        <h3>Auto Exposure Bracket</h3>
+        <button onclick="openPage('Auto_Expo_Bracket.html')">Open</button>
+    </div>
+
+    <div class="card">
+        <h3>Bit Depth Realtime</h3>
+        <button onclick="openPage('Bit-depth_realtime.html')">Open</button>
+    </div>
+
+    
+
+   
+
+    <div class="card">
+        <h3>Color Depth + Shadow</h3>
+        <button onclick="openPage('Color_depth+Shadow.html')">Open</button>
+    </div>
+
+   
+
+    <div class="card">
+        <h3>RGB Dominance</h3>
+        <button onclick="openPage('Final_RGB realtime+Dominance.html')">Open</button>
+    </div>
+
+    
+
+    <div class="card">
+        <h3>Kelvin Simulator</h3>
+        <button onclick="openPage('Kelvin_Simulator.html')">Open</button>
+    </div>
+
+    <div class="card">
+        <h3>Metering Mode</h3>
+        <button onclick="openPage('Metering_mode.html')">Open</button>
+    </div>
+
+    
+
+    <div class="card">
+        <h3>Pixel Binning</h3>
+        <button onclick="openPage('Pixel_Binning.html')">Open</button>
+    </div>
+
+    <div class="card">
+        <h3>Realtime HDR</h3>
+        <button onclick="openPage('Realtime-HDR.html')">Open</button>
+    </div>
+	 <div class="card">
+        <h3>Canon R6 Mark III Sensor Work Flow</h3>
+        <button onclick="openPage('Canon_R6_Mark_III- Product Understanding.html')">Open</button>
+    </div> <div class="card">
+        <h3>Canon EOS C50 (Landscape+Reel) </h3>
+        <button onclick="openPage('C50.html')">Open</button>
+    </div>
+
+</div>
+
+<script>
+function openPage(page){
+    window.open(page, "_blank");
+}
+</script>
+
+</body>
+</html>

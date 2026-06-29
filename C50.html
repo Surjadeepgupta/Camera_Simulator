@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Canon C50 Live Simulator</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    color:#fff;
+    overflow:hidden;
+}
+
+/* HEADER (UPDATED BIG + CANON RED) */
+.header{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    padding:18px 0;
+
+    text-align:center;
+    font-size:22px;   /* 🔥 increased size */
+    font-weight:700;
+    letter-spacing:0.8px;
+
+    background:rgb(200, 16, 46);
+    color:#ffffff;
+
+    z-index:10;
+}
+
+.app{
+    display:flex;
+    width:100vw;
+    height:100vh;
+    padding-top:60px; /* adjusted for bigger header */
+    box-sizing:border-box;
+}
+
+.controls{
+    width:420px;
+
+    padding:22px;
+
+    overflow:auto;
+
+    background:
+    linear-gradient(
+        135deg,
+        #c8102e 0%,
+        #8b0000 45%,
+        #111 100%
+    );
+
+    border-right:
+    1px solid rgba(255,255,255,0.08);
+
+}
+
+.sensor-wrapper{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+}
+
+.sensor-container{
+    position:relative;
+    width:855px;
+    height:570px;
+    background:#000;
+    overflow:hidden;
+    box-shadow:0 0 40px rgba(0,0,0,0.9);
+}
+
+.control-group{
+    display:flex;
+    flex-direction:column;
+    font-size:12px;
+}
+
+label{ margin-bottom:4px; color:#aaa; }
+
+select{
+    width:100%;
+
+    padding:12px;
+
+    margin-bottom:8px;
+
+    border-radius:15px;
+
+    background:#000;
+
+    color:#fff;
+
+    border:1px solid #333;
+
+    font-size:15px;
+
+    outline:none;
+}
+
+.sensorGlow{
+    position:absolute;
+    width:100%;
+    height:100%;
+    background:linear-gradient(90deg,red,green,blue);
+    background-size:200% 100%;
+    animation: move 0.6s linear infinite;
+    z-index:0;
+}
+.grid{
+    position:absolute;
+    inset:0;
+    background:
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:6px 6px;
+}
+
+
+.overlay{
+    position:absolute;
+    border:2px solid red;
+    z-index:3;
+}
+
+.cropOverlay{
+    position:absolute;
+    border:2px solid yellow;
+    box-shadow:0 0 10px rgba(255,255,0,0.4);
+    z-index:4;
+}
+
+.legend{
+    position:absolute;
+    top:10px;
+    left:10px;
+    background:rgba(0,0,0,0.6);
+    padding:6px 10px;
+    font-size:12px;
+    z-index:5;
+}
+
+@keyframes move{
+    0%{ background-position:0% 50%; }
+    100%{ background-position:100% 50%; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+Canon C50 Imaging Simulator — Multi-Resolution Sensor View
+</div>
+
+<div class="app">
+
+<div class="controls">
+
+<div class="control-group">
+<label>Recording Mode</label>
+<select id="recordMode">
+    <option value="main">Main Only</option>
+    <option value="both">Main + Crop</option>
+</select>
+</div>
+
+<div class="control-group">
+<label>Sensor Mode</label>
+<select id="sensorMode">
+    <option value="ff32">OpenGate 3:2</option>
+    <option value="ff">Full Frame</option>
+    <option value="s35">Super 35mm</option>
+    <option value="s16">Super 16mm</option>
+</select>
+</div>
+
+<div class="control-group">
+<label>Codec</label>
+<select id="format"></select>
+</div>
+
+<div class="control-group">
+<label>Main Res</label>
+<select id="resolution"></select>
+</div>
+
+<div class="control-group" id="cropGroup" style="display:none;">
+<label>Vertical Crop</label>
+<select id="crop"></select>
+</div>
+
+</div>
+
+<div class="sensor-wrapper">
+<div class="sensor-container" id="container">
+
+    <div class="sensorGlow"></div>
+    <div id="overlay" class="overlay"></div>
+    <div id="cropOverlay" class="cropOverlay"></div>
+    <div class="legend" id="legend"></div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+/* FULL CODEC SYSTEM (UNCHANGED) */
+const data = {
+    ff32:{
+        "RAW":["6960x4640"],
+        "XF-HEVC S":["6912x4608"]
+    },
+    ff:{
+        "RAW":["6960x3672"],
+        "XF-AVC":["4096x2160","3840x2160"],
+        "XF-HEVC S":["4096x2160","3840x2160"],
+        "XF-AVC S":["4096x2160","3840x2160"]
+    },
+    s35:{
+        "RAW":["5036x2656"],
+        "XF-AVC":["4096x2160","3840x2160"],
+        "XF-HEVC S":["4096x2160","3840x2160"],
+        "XF-AVC S":["4096x2160","3840x2160"]
+    },
+    s16:{
+        "RAW":["2524x1332"],
+        "XF-AVC":["2048x1080"],
+        "XF-HEVC S":["2048x1080"],
+        "XF-AVC S":["2048x1080"]
+    }
+};
+
+const SENSOR_W = 7000;
+
+const recordMode = document.getElementById("recordMode");
+const sensorMode = document.getElementById("sensorMode");
+const format = document.getElementById("format");
+const resolution = document.getElementById("resolution");
+const crop = document.getElementById("crop");
+
+const overlay = document.getElementById("overlay");
+const cropOverlay = document.getElementById("cropOverlay");
+const container = document.getElementById("container");
+const legend = document.getElementById("legend");
+const cropGroup = document.getElementById("cropGroup");
+
+let targetX = 0;
+let currentX = 0;
+
+/* FORMAT */
+function updateFormats(){
+    const mode = sensorMode.value;
+    format.innerHTML="";
+    Object.keys(data[mode]).forEach(f=>{
+        format.innerHTML += `<option>${f}</option>`;
+    });
+    updateRes();
+}
+
+/* RES */
+function updateRes(){
+    const mode = sensorMode.value;
+    const fmt = format.value;
+
+    resolution.innerHTML="";
+    data[mode][fmt].forEach(r=>{
+        resolution.innerHTML += `<option>${r}</option>`;
+    });
+
+    updateCrop();
+    draw();
+}
+
+/* CROP */
+function updateCrop(){
+
+    if(recordMode.value==="main"){
+        crop.innerHTML="";
+        cropGroup.style.display="none";
+        return;
+    }
+
+    const f = format.value;
+    const r = resolution.value;
+
+    crop.innerHTML="";
+
+    if(f==="XF-AVC" && r==="4096x2160")
+        crop.innerHTML=`<option value="1080x2048">1080×2048</option>`;
+    else if(f==="XF-HEVC S" && r==="3840x2160")
+        crop.innerHTML=`<option value="1080x1920">1080×1920</option>`;
+    else if(f==="XF-AVC S" && r==="4096x2160")
+        crop.innerHTML=`<option value="1080x1080">1080×1080</option>`;
+
+    cropGroup.style.display = crop.innerHTML ? "flex" : "none";
+}
+
+/* CLAMP */
+function clamp(){
+
+    if(!crop.value) return;
+
+    const [cw] = crop.value.split("x").map(Number);
+    const [mw] = resolution.value.split("x").map(Number);
+
+    const s = container.clientWidth / SENSOR_W;
+
+    const mainW = mw * s;
+    const cropW = cw * s;
+
+    const maxX = (mainW - cropW) / 2;
+
+    targetX = Math.round(targetX);
+
+    if(targetX > maxX) targetX = maxX;
+    if(targetX < -maxX) targetX = -maxX;
+}
+
+/* DRAW MAIN */
+function draw(){
+
+    const [w,h] = resolution.value.split("x").map(Number);
+    const s = container.clientWidth / SENSOR_W;
+
+    overlay.style.width = (w*s)+"px";
+    overlay.style.height = (h*s)+"px";
+
+    overlay.style.left = (container.clientWidth - w*s)/2 + "px";
+    overlay.style.top = (container.clientHeight - h*s)/2 + "px";
+
+    drawCrop();
+}
+
+/* DRAW CROP (PIXEL LOCKED) */
+function drawCrop(){
+
+    if(recordMode.value==="main" || !crop.value){
+        cropOverlay.style.display="none";
+        legend.innerHTML=`Main: ${resolution.value}`;
+        return;
+    }
+
+    const [cw] = crop.value.split("x").map(Number);
+    const [mw] = resolution.value.split("x").map(Number);
+
+    const s = container.clientWidth / SENSOR_W;
+
+    const mainW = mw * s;
+    const cropW = cw * s;
+
+    const mainLeft = (container.clientWidth - mainW)/2;
+
+    currentX = targetX;
+
+    cropOverlay.style.display="block";
+
+    cropOverlay.style.width = cropW+"px";
+    cropOverlay.style.height = (crop.value.split("x")[1]*s)+"px";
+
+    cropOverlay.style.left =
+        (mainLeft + (mainW/2 - cropW/2) + currentX)+"px";
+
+    cropOverlay.style.top =
+        (container.clientHeight/2 - cropOverlay.offsetHeight/2)+"px";
+
+    legend.innerHTML=`Main: ${resolution.value}<br>Crop: ${crop.value}`;
+}
+
+/* INPUT */
+container.addEventListener("wheel", e=>{
+    if(recordMode.value==="main" || !crop.value) return;
+    e.preventDefault();
+
+    if(e.deltaY > 0) targetX += 1;
+    else targetX -= 1;
+
+    clamp();
+},{ passive:false });
+
+/* LOOP */
+function loop(){
+    drawCrop();
+    requestAnimationFrame(loop);
+}
+loop();
+
+/* INIT */
+sensorMode.onchange=updateFormats;
+format.onchange=updateRes;
+resolution.onchange=()=>{ targetX=0; currentX=0; updateCrop(); draw(); };
+crop.onchange=draw;
+recordMode.onchange=()=>{ updateCrop(); draw(); };
+
+updateFormats();
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+</script>
+
+</body>
+</html>

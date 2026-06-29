@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pixel Binning Night Photography Simulator</title>
+<style>
+body{font-family:Arial,sans-serif;text-align:center;background:linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);color:#eee}
+canvas{border:1px solid #555;background:#000;max-width:95vw}
+.controls{margin:10px}
+label{margin:0 10px}
+</style>
+</head>
+<body>
+<h1>Sensor-Level Pixel Binning Simulator</h1>
+<p>Visualizing how 4-in-1 pixel binning improves low-light capture.</p>
+
+<div class="controls">
+<label>Scene Brightness
+<input type="range" id="light" min="5" max="100" value="20">
+</label>
+<label>
+<input type="checkbox" id="binning" checked>
+Enable 2×2 Pixel Binning
+</label>
+</div>
+
+<canvas id="sensor" width="640" height="640"></canvas>
+
+<script>
+const canvas=document.getElementById("sensor");
+const ctx=canvas.getContext("2d");
+const light=document.getElementById("light");
+const binning=document.getElementById("binning");
+
+const pixels=32;
+const cell=canvas.width/pixels;
+
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    let raw=[];
+    for(let y=0;y<pixels;y++){
+        raw[y]=[];
+        for(let x=0;x<pixels;x++){
+            let signal=Math.random()*light.value;
+            raw[y][x]=signal;
+        }
+    }
+
+    if(binning.checked){
+        for(let y=0;y<pixels;y+=2){
+            for(let x=0;x<pixels;x+=2){
+                let avg=(raw[y][x]+raw[y][x+1]+raw[y+1][x]+raw[y+1][x+1])/4;
+                for(let yy=0;yy<2;yy++){
+                    for(let xx=0;xx<2;xx++){
+                        let v=Math.min(avg*2.2,255);
+                        ctx.fillStyle=`rgb(${v},${v},${v})`;
+                        ctx.fillRect((x+xx)*cell,(y+yy)*cell,cell,cell);
+                    }
+                }
+            }
+        }
+    }else{
+        for(let y=0;y<pixels;y++){
+            for(let x=0;x<pixels;x++){
+                let v=Math.min(raw[y][x]*2.2,255);
+                ctx.fillStyle=`rgb(${v},${v},${v})`;
+                ctx.fillRect(x*cell,y*cell,cell,cell);
+            }
+        }
+    }
+
+    ctx.fillStyle="white";
+    ctx.fillText(binning.checked ? "2x2 Pixel Binning Active (12MP mode)" :
+                                   "Native Pixel Readout (48MP mode)",10,20);
+}
+light.oninput=draw;
+binning.onchange=draw;
+draw();
+	document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lens Aperture Simulator</title>
+
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+overflow:hidden;
+font-family:Segoe UI;
+color:white;
+background:black;
+}
+
+/* BACKGROUND */
+.background{
+position:fixed;
+inset:0;
+z-index:-5;
+}
+
+.background img{
+width:100%;
+height:100%;
+object-fit:cover;
+transition:filter 0.25s linear;
+opacity: 20
+}
+
+/* TITLE */
+.title{
+position:fixed;
+top:15px;
+left:50%;
+transform:translateX(-50%);
+font-size:clamp(20px,4vw,34px);
+font-weight:700;
+text-shadow:0 0 20px black;
+}
+
+/* LENS BODY */
+#aperture{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:min(75vw,520px);
+height:min(75vw,520px);
+border-radius:50%;
+background:
+radial-gradient(circle,#444,#111,#000);
+box-shadow:
+0 0 40px rgba(0,0,0,0.95),
+inset 0 0 60px rgba(255,255,255,0.08);
+display:flex;
+justify-content:center;
+align-items:center;
+}
+
+/* INNER */
+#apertureInner{
+position:relative;
+width:72%;
+height:72%;
+border-radius:50%;
+overflow:hidden;
+background:radial-gradient(circle,#fff,#111);
+
+}
+
+/* BLADES */
+.blade{
+position:absolute;
+width:100%;
+height:100%;
+top:50%;
+left:50%;
+transform-origin:0% 0%;
+clip-path:polygon(0 0,100% 0,100% 100%);
+background:linear-gradient(135deg,#c8102e,#6b0010,#111);
+transition:transform 0.1s ease;
+}
+
+/* CONTROLS */
+.controls{
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+width:min(95vw,900px);
+text-align:center;
+}
+
+#slider{
+width:100%;
+appearance:none;
+height:8px;
+border-radius:20px;
+background:linear-gradient(90deg,#222,#999);
+outline:none;
+}
+
+#slider::-webkit-slider-thumb{
+appearance:none;
+width:28px;
+height:28px;
+border-radius:50%;
+background:#c8102e;
+border:3px solid white;
+cursor:pointer;
+}
+
+/* SCALE */
+.scale{
+display:flex;
+justify-content:space-between;
+margin-top:10px;
+font-size:11px;
+color:#red;
+}
+
+.info{
+margin-top:15px;
+font-size:26px;
+font-weight:700;
+}
+
+.details{
+margin-top:6px;
+font-size:15px;
+opacity:0.9;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="background">
+<img id="bgImage"
+src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e">
+</div>
+
+<div class="title">
+Lens Aperture Simulator
+</div>
+
+<div id="aperture">
+<div id="apertureInner"></div>
+</div>
+
+<div class="controls">
+
+<input type="range" id="slider" min="0" max="14" step="1" value="0">
+
+<div class="scale">
+<span>1.2</span><span>1.4</span><span>1.8</span><span>2</span><span>2.8</span>
+<span>4</span><span>5.6</span><span>6.3</span><span>7.1</span><span>8</span>
+<span>11</span><span>16</span><span>18</span><span>20</span><span>22</span>
+</div>
+
+<div class="info">
+f/<span id="fval">1.2</span>
+</div>
+
+<div class="details">
+Aperture Diameter: <span id="diameter">41.67</span> mm (50mm lens)
+</div>
+
+</div>
+
+<script>
+
+const focalLength = 50;
+
+const apertureScale =
+[1.2,1.4,1.8,2,2.8,4,5.6,6.3,7.1,8,11,16,18,20,22];
+
+const slider = document.getElementById("slider");
+const fval = document.getElementById("fval");
+const diameterText = document.getElementById("diameter");
+const aperture = document.getElementById("apertureInner");
+const bgImage = document.getElementById("bgImage");
+
+const blades=[];
+const bladeCount=9;
+
+/* CREATE BLADES */
+for(let i=0;i<bladeCount;i++){
+const b=document.createElement("div");
+b.className="blade";
+aperture.appendChild(b);
+blades.push(b);
+}
+
+function updateAperture(){
+
+const f = apertureScale[slider.value];
+fval.innerText = f;
+
+/* REAL 50mm LENS */
+const diameter = focalLength / f;
+diameterText.innerText = diameter.toFixed(2);
+
+/* MAX OPENING (f/1.2) */
+const maxDiameter = focalLength / 1.2;
+
+/* 1 = wide open, 0 = closed */
+const openingRatio = diameter / maxDiameter;
+
+/* ---------------------------
+   FIXED REVERSED APERTURE
+----------------------------*/
+const fullyOpenAngle = 39;
+const fullyClosedAngle = 4;
+
+/* ✅ CORRECT: f/1.2 widest, f/22 smallest */
+const bladeAngle =
+fullyOpenAngle +
+(1 - openingRatio) *
+(fullyClosedAngle - fullyOpenAngle);
+
+/* APPLY BLADES */
+blades.forEach((blade,i)=>{
+
+const baseAngle = (360/bladeCount)*i;
+
+blade.style.transform =
+`rotate(${baseAngle}deg)
+translate(-100%,-100%)
+rotate(${bladeAngle}deg)`;
+
+});
+
+/* IMAGE EFFECTS */
+const blur = (0.15 + openingRatio) *2;
+const contrast = 1 + (1 -openingRatio) * 0.1;
+const brightness = 1 - (1 - openingRatio) * 0.45;
+
+bgImage.style.filter =
+`blur(${blur}px)
+contrast(${contrast})
+brightness(${brightness})`;
+}
+
+slider.addEventListener("input",updateAperture);
+updateAperture();
+	
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

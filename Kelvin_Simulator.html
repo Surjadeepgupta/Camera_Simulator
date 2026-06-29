@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>LiveView Kelvin Stimulation</title>
+
+<style>
+
+body{
+background:
+linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+font-family:Arial;
+color:white;
+margin:0;
+text-align:center;
+}
+
+.liveview{
+width:900px;
+margin:auto;
+margin-top:20px;
+position:relative;
+border:4px solid #222;
+}
+
+video{
+width:100%;
+height:500px;
+object-fit:cover;
+transform:scaleX(-1);
+}
+
+#overlay{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+mix-blend-mode:overlay;
+opacity:.3;
+pointer-events:none;
+}
+
+.ui-right{
+position:absolute;
+top:10px;
+right:10px;
+font-size:18px;
+background:rgba(0,0,0,.4);
+padding:5px 10px;
+}
+
+.bottom-ui{
+position:absolute;
+bottom:10px;
+left:0;
+right:0;
+display:flex;
+justify-content:center;
+gap:20px;
+font-size:18px;
+}
+
+.scale{
+position:absolute;
+right:-70px;
+top:0;
+width:50px;
+height:500px;
+background:linear-gradient(
+to bottom,
+#2b2fa5,
+#6c66c9,
+#d6d6d6,
+#f2e596,
+#f07a4a,
+#ff0000
+);
+border:2px solid #333;
+}
+
+.controls{
+margin-top:15px;
+}
+
+input[type=range]{
+width:500px;
+}
+
+button{
+margin-top:10px;
+padding:10px 25px;
+font-size:18px;
+background:#e60012;
+border:none;
+color:white;
+cursor:pointer;
+}
+
+button:hover{
+background:#ff2a2a;
+}
+
+</style>
+</head>
+
+<body>
+	<h2>Kelvin Simulator-Canon Concept</h2>
+
+<div class="liveview">
+
+<video id="cam" autoplay playsinline></video>
+<div id="overlay"></div>
+
+<div class="ui-right">
+WB <span id="kelvinValue">5200K</span>
+</div>
+
+<div class="bottom-ui">
+<div>White Balance</div>
+<div id="look">Daylight</div>
+</div>
+
+<div class="scale"></div>
+
+</div>
+
+<div class="controls">
+
+<input type="range" min="2000" max="10000" value="5200" id="kelvin">
+
+<br>
+
+<button onclick="capture()">Capture</button>
+
+</div>
+
+<canvas id="canvas" width="900" height="500" style="display:none"></canvas>
+
+<script>
+
+const video=document.getElementById("cam")
+
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>{
+video.srcObject=stream
+})
+
+const slider=document.getElementById("kelvin")
+const overlay=document.getElementById("overlay")
+const kelvinText=document.getElementById("kelvinValue")
+const look=document.getElementById("look")
+
+function kelvinColor(k){
+
+let ratio=(k-2000)/(10000-2000)
+
+let r=255*ratio
+let b=255*(1-ratio)
+let g=200-(ratio*80)
+
+return {r:r,g:g,b:b}
+
+}
+
+function updateKelvin(){
+
+let k=parseInt(slider.value)
+
+let color=kelvinColor(k)
+
+overlay.style.background=`rgb(${color.r},${color.g},${color.b})`
+
+let strength=Math.abs(k-5200)/4800
+overlay.style.opacity=0.15+strength*0.5
+
+kelvinText.innerHTML=k+"K"
+
+let label="Custom"
+
+if(k>=3000 && k<3600) label="Tungsten"
+else if(k>=3600 && k<4600) label="White Fluorescent"
+else if(k>=4600 && k<5600) label="Daylight"
+else if(k>=5600 && k<6500) label="Cloudy / Twilight"
+else if(k>=6500 && k<=7500) label="Shade"
+else if(k>7500) label="Warm"
+
+look.innerHTML=label
+
+}
+
+slider.addEventListener("input",updateKelvin)
+
+updateKelvin()
+
+function capture(){
+
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
+
+canvas.width=video.videoWidth
+canvas.height=video.videoHeight
+
+ctx.translate(canvas.width,0)
+ctx.scale(-1,1)
+
+ctx.drawImage(video,0,0,canvas.width,canvas.height)
+
+let k=parseInt(slider.value)
+let color=kelvinColor(k)
+
+let strength=Math.abs(k-5200)/4800
+let opacity=0.15+strength*0.5
+
+ctx.fillStyle=`rgba(${color.r},${color.g},${color.b},${opacity})`
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+let link=document.createElement("a")
+link.download="capture_kelvin.jpg"
+link.href=canvas.toDataURL("image/jpeg")
+link.click()
+
+}
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

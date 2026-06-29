@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>HDR Stimulation</title>
+
+<style>
+
+body{
+background:linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+color:white;
+font-family:Arial;
+text-align:center;
+margin:0;
+}
+
+.liveview{
+width:900px;
+margin:auto;
+margin-top:20px;
+border:4px solid #222;
+}
+
+video{
+width:100%;
+height:500px;
+object-fit:cover;
+transform:scaleX(-1);
+}
+
+button{
+margin-top:15px;
+padding:10px 20px;
+font-size:16px;
+background:#e60012;
+border:none;
+color:white;
+cursor:pointer;
+}
+
+.preview-area{
+width:900px;
+margin:auto;
+margin-top:20px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:15px;
+}
+
+.box{
+background:#111;
+border:2px solid #333;
+padding:5px;
+}
+
+canvas{
+width:100%;
+height:200px;
+}
+
+.title{
+font-size:14px;
+margin-bottom:5px;
+}
+
+</style>
+</head>
+
+<body>
+<h2>Real-time HDR simulation</h2>
+<div class="liveview">
+<video id="cam" autoplay playsinline></video>
+</div>
+
+<button onclick="generateHDR()">Generate HDR Simulation</button>
+
+
+<div class="preview-area">
+
+<div class="box">
+<div class="title">Under Exposed </div>
+<canvas id="under"></canvas>
+</div>
+
+<div class="box">
+<div class="title">Normal Exposure </div>
+<canvas id="normal"></canvas>
+</div>
+
+<div class="box">
+<div class="title">Over Exposed</div>
+<canvas id="over"></canvas>
+</div>
+
+<div class="box">
+<div class="title">HDR Combined Output</div>
+<canvas id="hdr"></canvas>
+</div>
+
+</div>
+
+
+<script>
+
+const video=document.getElementById("cam")
+
+navigator.mediaDevices.getUserMedia({video:true})
+.then(stream=>{
+video.srcObject=stream
+})
+
+function drawExposure(canvasId,brightness){
+
+const canvas=document.getElementById(canvasId)
+const ctx=canvas.getContext("2d")
+
+canvas.width=320
+canvas.height=200
+
+ctx.drawImage(video,0,0,canvas.width,canvas.height)
+
+if(brightness!=0){
+
+ctx.fillStyle=`rgba(0,0,0,${brightness<0?Math.abs(brightness):0})`
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+ctx.fillStyle=`rgba(255,255,255,${brightness>0?brightness:0})`
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+}
+
+}
+
+function generateHDR(){
+
+drawExposure("under",-0.4)
+
+drawExposure("normal",0)
+
+drawExposure("over",0.35)
+
+
+const canvas=document.getElementById("hdr")
+const ctx=canvas.getContext("2d")
+
+canvas.width=320
+canvas.height=200
+
+ctx.drawImage(video,0,0,canvas.width,canvas.height)
+
+ctx.globalAlpha=.25
+ctx.fillStyle="black"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+ctx.globalAlpha=.2
+ctx.fillStyle="white"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+ctx.globalAlpha=1
+
+}
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

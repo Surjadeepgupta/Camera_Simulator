@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Canon AEB Simulator</title>
+
+<style>
+
+body{
+background:
+linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+font-family:Arial;
+color:white;
+text-align:center;
+}
+
+h1{
+color:#ff2a2a;
+letter-spacing:2px;
+}
+
+.viewer{
+width:850px;
+height:480px;
+margin:auto;
+border:3px solid #444;
+overflow:hidden;
+border-radius:8px;
+position:relative;
+}
+
+.viewer img{
+width:100%;
+height:100%;
+object-fit:cover;
+transition:0.3s;
+}
+
+.flash{
+position:absolute;
+width:100%;
+height:100%;
+background:white;
+opacity:0;
+}
+
+.controls{
+margin-top:25px;
+}
+
+.slider{
+width:400px;
+}
+
+.evBar{
+margin-top:20px;
+display:flex;
+justify-content:center;
+gap:10px;
+}
+
+.ev{
+width:45px;
+padding:8px;
+border:1px solid #555;
+border-radius:4px;
+}
+
+.active{
+background:#ff2a2a;
+}
+
+button{
+margin-top:20px;
+padding:12px 35px;
+font-size:18px;
+background:#ff2a2a;
+border:none;
+color:white;
+border-radius:4px;
+cursor:pointer;
+}
+
+button:hover{
+background:#ff4444;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Exposure Bracketing (AEB)</h1>
+
+<div class="viewer">
+
+<img id="image" src="https://images.unsplash.com/photo-1501785888041-af3ef285b470">
+
+<div class="flash" id="flash"></div>
+
+</div>
+
+<div class="controls">
+
+<h3>AEB Range: <span id="value">±1 EV</span></h3>
+
+<input class="slider" type="range" min="1" max="3" value="1" id="slider">
+
+</div>
+
+<div class="evBar" id="evBar"></div>
+
+<button onclick="startBurst()">Start Burst</button>
+
+<audio id="shutter">
+<source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3">
+</audio>
+
+<script>
+
+let slider=document.getElementById("slider")
+let value=document.getElementById("value")
+let bar=document.getElementById("evBar")
+let img=document.getElementById("image")
+
+function buildBar(range){
+
+bar.innerHTML=""
+
+let shots=[-range,0,range]
+
+shots.forEach(v=>{
+
+let d=document.createElement("div")
+d.className="ev"
+d.id="ev"+v
+d.innerText=(v>0?"+":"")+v
+bar.appendChild(d)
+
+})
+
+}
+
+buildBar(1)
+
+slider.oninput=function(){
+
+value.innerText="±"+this.value+" EV"
+buildBar(this.value)
+
+}
+
+function highlight(v){
+
+document.querySelectorAll(".ev").forEach(e=>e.classList.remove("active"))
+
+document.getElementById("ev"+v).classList.add("active")
+
+}
+
+function flash(){
+
+let f=document.getElementById("flash")
+
+f.style.opacity=0.9
+
+setTimeout(()=>{
+
+f.style.opacity=0
+
+},80)
+
+}
+
+async function startBurst(){
+
+let r=parseInt(slider.value)
+
+let shots=[-r,0,r]
+
+for(let s of shots){
+
+highlight(s)
+
+let bright=1+(s*0.4)
+
+img.style.filter="brightness("+bright+")"
+
+document.getElementById("shutter").currentTime=0
+document.getElementById("shutter").play()
+
+flash()
+
+await new Promise(res=>setTimeout(res,350))
+
+}
+
+}
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Canon R6 Mark III Image Sensor Logic Simulation</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    user-select:none;
+    -webkit-user-select:none;
+}
+
+body{
+    margin:0;
+    font-family:Arial;
+    color:#fff;
+    overflow:hidden;
+
+    background:
+    linear-gradient(
+        135deg,
+        #c8102e 0%,
+        #8b0000 45%,
+        #111 100%
+    );
+}
+
+/* HEADER */
+
+.header{
+
+    padding:18px 20px;
+
+    font-size:30px;
+
+    font-weight:bold;
+
+    text-align:center;
+
+    letter-spacing:1px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #c8102e 0%,
+        #8b0000 45%,
+        #111 100%
+    );
+
+    border-bottom:
+    1px solid rgba(255,255,255,0.08);
+
+}
+
+/* MAIN */
+
+.container{
+    display:flex;
+    height:calc(100vh - 72px);
+}
+
+/* LEFT PANEL */
+
+.controls{
+
+    width:420px;
+
+    padding:22px;
+
+    overflow:auto;
+
+    background:
+    linear-gradient(
+        135deg,
+        #c8102e 0%,
+        #8b0000 45%,
+        #111 100%
+    );
+
+    border-right:
+    1px solid rgba(255,255,255,0.08);
+
+}
+
+label{
+
+    display:block;
+
+    margin-top:18px;
+    margin-bottom:8px;
+
+    font-size:18px;
+    font-weight:bold;
+
+}
+
+/* DROPDOWN */
+
+select{
+
+    width:100%;
+
+    padding:12px;
+
+    margin-bottom:8px;
+
+    border-radius:15px;
+
+    background:#000;
+
+    color:#fff;
+
+    border:1px solid #333;
+
+    font-size:15px;
+
+    outline:none;
+
+}
+
+/* INFO */
+
+.info{
+
+    margin-top:18px;
+
+    color:#00ffd0;
+
+    font-size:14px;
+
+    line-height:1.8;
+
+}
+
+/* TOGGLE */
+
+.toggle{
+
+    position:relative;
+
+    margin-top:22px;
+
+}
+
+.toggle input[type="checkbox"]{
+
+    position:absolute;
+
+    inset:0;
+
+    opacity:0;
+
+    cursor:pointer;
+
+    z-index:10;
+
+}
+
+.toggle label{
+
+    position:relative;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    margin:0;
+
+    cursor:pointer;
+
+}
+
+.toggle label:before{
+
+    content:'';
+
+    width:84px;
+    height:38px;
+
+    border-radius:46px;
+
+    background:#fff;
+
+    border:2px solid #000;
+
+    transition:0.2s ease-in;
+
+}
+
+.toggle label:after{
+
+    content:'';
+
+    position:absolute;
+
+    width:28px;
+    height:28px;
+
+    border-radius:50%;
+
+    border:2px solid #000;
+
+    background:#000;
+
+    left:6px;
+    top:5px;
+
+    transition:0.2s ease-in;
+
+}
+
+.toggle input:checked + label:before{
+
+    background:#000;
+
+}
+
+.toggle input:checked + label:after{
+
+    left:50px;
+
+    background:#fff;
+
+    border-color:#fff;
+
+}
+
+.toggleText{
+
+    font-size:18px;
+    font-weight:bold;
+
+}
+
+/* VIEWER */
+
+.viewer{
+
+    flex:1;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+    position:relative;
+
+    overflow:hidden;
+
+}
+
+/* SENSOR WRAPPER */
+
+.sensor-wrapper{
+
+    position:relative;
+
+    width:90%;
+    height:90%;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+}
+
+/* SENSOR */
+
+.sensor{
+
+    position:absolute;
+
+    width:min(78vw,920px);
+
+    aspect-ratio:3/2;
+
+    overflow:hidden;
+
+    background:
+    linear-gradient(
+        90deg,
+        red,
+        green,
+        blue
+    );
+
+    background-size:200% 100%;
+
+    animation:move 0.6s linear infinite;
+
+    box-shadow:
+    0 0 40px rgba(0,0,0,0.95);
+
+}
+
+/* RGB */
+
+@keyframes move{
+
+0%{
+background-position:0% 50%;
+}
+
+100%{
+background-position:100% 50%;
+}
+
+}
+
+/* GRID */
+
+.grid{
+
+    position:absolute;
+
+    inset:0;
+
+    background:
+
+    linear-gradient(
+        rgba(255,255,255,0.06) 1px,
+        transparent 1px
+    ),
+
+    linear-gradient(
+        90deg,
+        rgba(255,255,255,0.06) 1px,
+        transparent 1px
+    );
+
+    background-size:8px 8px;
+
+    pointer-events:none;
+
+}
+
+/* ACTIVE FRAME */
+
+.frame{
+
+    position:absolute;
+
+    top:50%;
+    left:50%;
+
+    transform:translate(-50%,-50%);
+
+    border:2px solid #00ffd0;
+
+    box-shadow:
+    0 0 12px rgba(0,255,208,0.6);
+
+}
+
+/* MARKERS */
+
+.marker{
+
+    position:absolute;
+
+    top:50%;
+    left:50%;
+
+    transform:translate(-50%,-50%);
+
+    border:4px dashed red;
+
+    pointer-events:none;
+
+}
+
+.marker2{
+    border-color:yellow;
+}
+
+.hidden{
+    display:none;
+}
+
+/* MOBILE */
+
+@media(max-width:900px){
+
+.container{
+    flex-direction:column;
+    height:auto;
+}
+
+.controls{
+    width:100%;
+    border-right:none;
+    border-bottom:
+    1px solid rgba(255,255,255,0.08);
+}
+
+.viewer{
+    height:65vh;
+}
+
+.sensor{
+    width:92%;
+}
+
+.header{
+    font-size:22px;
+}
+
+}
+
+@media(max-width:500px){
+
+.header{
+    font-size:18px;
+    padding:14px;
+}
+
+label{
+    font-size:15px;
+}
+
+select{
+    font-size:14px;
+    padding:10px;
+}
+
+.viewer{
+    height:58vh;
+}
+
+.sensor{
+    width:96%;
+}
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+Canon R6 Mark III Image Sensor Logic Simulation
+</div>
+
+<div class="container">
+
+<!-- LEFT -->
+
+<div class="controls">
+
+<label>Open Gate</label>
+
+<select id="opengate">
+
+<option value="off">
+Disabled
+</option>
+
+<option value="on">
+Enabled
+</option>
+
+</select>
+
+<label>Recording Format</label>
+
+<select id="format">
+
+<option value="raw">
+RAW (CRM)
+</option>
+
+<option value="mp4" selected>
+MP4
+</option>
+
+</select>
+
+<label>Mode</label>
+
+<select id="mode"></select>
+
+<!-- TOGGLE -->
+
+<div class="toggle">
+
+<input type="checkbox" id="markerToggle">
+
+<label for="markerToggle">
+
+<span class="toggleText">
+Aspect Markers (Disable / Enable)
+</span>
+
+</label>
+
+</div>
+
+<!-- MARKER CONTROLS -->
+
+<div id="markerControls" class="hidden">
+
+<label>Aspect Marker 1</label>
+
+<select id="marker1"></select>
+
+<label>Aspect Marker 2</label>
+
+<select id="marker2"></select>
+
+</div>
+
+<div class="info" id="infoBox"></div>
+
+</div>
+
+<!-- RIGHT -->
+
+<div class="viewer">
+
+<div class="sensor-wrapper">
+
+<div class="sensor" id="sensor">
+
+<div class="grid"></div>
+
+</div>
+
+<div class="frame" id="frame"></div>
+
+<div class="marker hidden" id="markerBox1"></div>
+
+<div class="marker marker2 hidden" id="markerBox2"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* SENSOR */
+
+const SENSOR_W = 6960;
+const SENSOR_H = 4640;
+
+/* ELEMENTS */
+
+const opengate = document.getElementById("opengate");
+const format = document.getElementById("format");
+const mode = document.getElementById("mode");
+
+const markerToggle =
+document.getElementById("markerToggle");
+
+const markerControls =
+document.getElementById("markerControls");
+
+const marker1 =
+document.getElementById("marker1");
+
+const marker2 =
+document.getElementById("marker2");
+
+const markerBox1 =
+document.getElementById("markerBox1");
+
+const markerBox2 =
+document.getElementById("markerBox2");
+
+const frame =
+document.getElementById("frame");
+
+const sensor =
+document.getElementById("sensor");
+
+const infoBox =
+document.getElementById("infoBox");
+
+/* RATIOS */
+
+const ratios = [
+
+"Off",
+"1:1",
+"4:5",
+"5:4",
+"9:16",
+"4:3",
+"13:9",
+"14:9",
+"16:9",
+"1.375:1",
+"1.66:1",
+"1.75:1",
+"1.85:1",
+"1.90:1",
+"2.35:1",
+"2.39:1"
+
+];
+
+/* PARSE */
+
+function parseRatio(r){
+
+if(r==="Off") return null;
+
+if(r.includes(":")){
+
+let [a,b]=r.split(":");
+
+return parseFloat(a)/parseFloat(b);
+
+}
+
+return parseFloat(r);
+
+}
+
+/* MP */
+
+function calculateMP(w,h){
+
+return ((w*h)/1000000).toFixed(1);
+
+}
+
+/* GET MODES */
+
+function getModes(){
+
+/* RAW */
+
+if(format.value==="raw"){
+
+    /*
+    IF OPEN GATE ENABLED
+    ONLY SHOW 3:2
+    */
+
+    if(opengate.value==="on"){
+
+        return [
+
+        {
+            label:"Open Gate RAW (3:2) 6960×4640",
+            w:6960,
+            h:4640
+        }
+
+        ];
+
+    }
+
+    /*
+    NORMAL RAW
+    */
+
+    return [
+
+    {
+        label:"RAW (Standard) (17:9) 6960×3672",
+        w:6960,
+        h:3672
+    },
+
+    {
+        label:"RAW (Light) (17:9) 6960×3672",
+        w:6960,
+        h:3672
+    }
+
+    ];
+
+}
+
+/* MP4 */
+
+let list = [
+
+{
+label:"4K DCI (17:9) 4096×2160",
+w:4096,
+h:2160
+},
+
+{
+label:"4K UHD (16:9) 3840×2160",
+w:3840,
+h:2160
+},
+
+{
+label:"2K DCI (17:9) 2048×1080",
+w:2048,
+h:1080
+},
+
+{
+label:"Full HD (16:9) 1920×1080",
+w:1920,
+h:1080
+}
+
+];
+
+/* OPEN GATE MP4 */
+
+if(opengate.value==="on"){
+
+list.unshift({
+
+label:"Open Gate MP4 (3:2) 6912×4608",
+w:6912,
+h:4608
+
+});
+
+}
+
+return list;
+
+}
+
+/* UPDATE MODES */
+
+function updateModes(){
+
+const previousMode = mode.value;
+
+mode.innerHTML="";
+
+getModes().forEach(m=>{
+
+let opt = new Option(m.label,m.label);
+
+opt.dataset.w = m.w;
+opt.dataset.h = m.h;
+
+mode.add(opt);
+
+});
+
+/* RESTORE */
+
+for(let i=0;i<mode.options.length;i++){
+
+if(mode.options[i].value===previousMode){
+
+mode.selectedIndex=i;
+break;
+
+}
+
+}
+
+/* DEFAULT */
+
+if(mode.selectedIndex===-1){
+
+mode.selectedIndex=0;
+
+}
+
+updateFrame();
+
+}
+
+/* AUTO DISABLE */
+
+function checkOpenGateAvailability(){
+
+const selected =
+mode.selectedOptions[0];
+
+if(!selected) return;
+
+const w =
+parseFloat(selected.dataset.w);
+
+const h =
+parseFloat(selected.dataset.h);
+
+if(
+
+format.value==="mp4" &&
+
+(
+
+(w===4096 && h===2160) ||
+(w===3840 && h===2160) ||
+(w===2048 && h===1080) ||
+(w===1920 && h===1080)
+
+)
+
+){
+
+if(opengate.value==="on"){
+
+opengate.value="off";
+
+updateModes();
+
+}
+
+}
+
+}
+
+/* MARKERS */
+
+function updateMarkerDropdowns(){
+
+ratios.forEach(r=>{
+
+marker1.add(new Option(r,r));
+marker2.add(new Option(r,r));
+
+});
+
+}
+
+function syncMarkers(){
+
+[...marker2.options].forEach(
+o=>o.disabled=false
+);
+
+if(marker1.value!=="Off"){
+
+[...marker2.options].forEach(o=>{
+
+if(o.value===marker1.value){
+
+o.disabled=true;
+
+}
+
+});
+
+}
+
+}
+
+/* DRAW */
+
+function drawMarker(box,ratio){
+
+if(!ratio || ratio==="Off"){
+
+box.classList.add("hidden");
+return;
+
+}
+
+let r = parseRatio(ratio);
+
+let frameW = frame.clientWidth;
+let frameH = frame.clientHeight;
+
+let w = frameW;
+let h = w / r;
+
+if(h > frameH){
+
+h = frameH;
+w = h * r;
+
+}
+
+box.style.width = w + "px";
+box.style.height = h + "px";
+
+box.classList.remove("hidden");
+
+}
+
+/* UPDATE */
+
+function updateFrame(){
+
+let selected =
+mode.selectedOptions[0];
+
+if(!selected) return;
+
+let w =
+parseFloat(selected.dataset.w);
+
+let h =
+parseFloat(selected.dataset.h);
+
+let sensorW =
+sensor.clientWidth;
+
+let sensorH =
+sensor.clientHeight;
+
+/* FRAME */
+
+frame.style.width =
+(sensorW*(w/SENSOR_W))+"px";
+
+frame.style.height =
+(sensorH*(h/SENSOR_H))+"px";
+
+/* MP */
+
+let megapixel =
+calculateMP(w,h);
+
+/* INFO */
+
+infoBox.innerHTML = `
+
+<b>Active:</b> ${w} × ${h}<br>
+
+<b>Sensor:</b> ${SENSOR_W} × ${SENSOR_H}<br>
+
+<b>Megapixel:</b> ${megapixel} MP
+
+`;
+
+/* MARKERS */
+
+if(markerToggle.checked){
+
+markerControls.classList.remove("hidden");
+
+drawMarker(
+markerBox1,
+marker1.value
+);
+
+drawMarker(
+markerBox2,
+marker2.value
+);
+
+}else{
+
+markerControls.classList.add("hidden");
+
+markerBox1.classList.add("hidden");
+markerBox2.classList.add("hidden");
+
+}
+
+}
+
+/* OPEN GATE */
+
+opengate.onchange = ()=>{
+
+/* MP4 */
+
+if(
+format.value==="mp4" &&
+opengate.value==="on"
+){
+
+updateModes();
+
+for(let i=0;i<mode.options.length;i++){
+
+const option =
+mode.options[i];
+
+const w =
+parseFloat(option.dataset.w);
+
+const h =
+parseFloat(option.dataset.h);
+
+if(
+w===6912 &&
+h===4608
+){
+
+mode.selectedIndex=i;
+break;
+
+}
+
+}
+
+updateFrame();
+
+return;
+
+}
+
+/* RAW */
+
+if(
+format.value==="raw" &&
+opengate.value==="on"
+){
+
+updateModes();
+
+updateFrame();
+
+return;
+
+}
+
+/* NORMAL */
+
+updateModes();
+
+};
+
+/* FORMAT */
+
+format.onchange = ()=>{
+
+updateModes();
+
+};
+
+/* MODE */
+
+mode.onchange = ()=>{
+
+checkOpenGateAvailability();
+
+updateFrame();
+
+};
+
+/* TOGGLE */
+
+markerToggle.onchange =
+updateFrame;
+
+/* MARKER */
+
+marker1.onchange = ()=>{
+
+syncMarkers();
+updateFrame();
+
+};
+
+marker2.onchange =
+updateFrame;
+
+/* RESIZE */
+
+window.onresize =
+updateFrame;
+
+/* INIT */
+
+updateMarkerDropdowns();
+updateModes();
+
+/* =========================================
+   SOURCE PROTECTION
+========================================= */
+
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

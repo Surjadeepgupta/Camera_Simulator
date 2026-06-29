@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title> Shutter Type Simulator</title>
+
+<style>
+
+body{
+background:
+linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+color:#fff;
+font-family:Arial, Helvetica, sans-serif;
+text-align:center;
+margin:0;
+user-select:none;
+}
+
+/* Header */
+
+h2{
+background:#c40000;
+padding:15px;
+margin:0;
+letter-spacing:1px;
+}
+
+/* Status bar */
+
+#statusbar{
+width:450px;
+margin:20px auto 0 auto;
+background:#111;
+border:2px solid #c40000;
+border-bottom:none;
+padding:10px;
+display:flex;
+justify-content:space-between;
+font-size:14px;
+}
+
+.info{
+background:#1a1a1a;
+padding:6px 10px;
+border-radius:4px;
+border:1px solid #333;
+}
+
+#canonlogo{
+color:#ff2a2a;
+font-weight:bold;
+}
+
+/* Sensor */
+
+#sensor{
+width:450px;
+height:320px;
+margin:auto;
+border:4px solid #c40000;
+position:relative;
+overflow:hidden;
+background:black;
+}
+
+/* Moving scene */
+
+#scene{
+position:absolute;
+width:120%;
+height:100%;
+background:linear-gradient(90deg,red,green,blue);
+animation:linear infinite;
+}
+
+@keyframes move{
+0%{transform:translateX(-40px)}
+100%{transform:translateX(40px)}
+}
+
+/* curtains */
+
+.curtain{
+position:absolute;
+width:100%;
+height:50%;
+background:black;
+z-index:5;
+}
+
+#curtain1{top:-50%;}
+#curtain2{bottom:-50%;}
+
+/* rolling scan */
+
+#scanline{
+position:absolute;
+width:100%;
+height:4px;
+background:#ff0000;
+top:0;
+display:none;
+z-index:6;
+}
+
+/* global flash */
+
+#flash{
+position:absolute;
+width:100%;
+height:100%;
+background:white;
+opacity:0;
+z-index:7;
+}
+
+/* bottom panel */
+
+#bottompanel{
+width:450px;
+margin:auto;
+background:#111;
+border:2px solid #c40000;
+border-top:none;
+padding:15px;
+}
+
+/* buttons */
+
+button{
+padding:10px 16px;
+margin:6px;
+font-size:14px;
+cursor:pointer;
+background:#c40000;
+border:none;
+border-radius:6px;
+color:white;
+font-weight:bold;
+}
+
+button:hover{
+background:#ff0000;
+}
+
+/* slider */
+
+input[type=range]{
+width:300px;
+margin-top:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2> Shutter Simulator</h2>
+
+<div id="statusbar">
+
+<div id="canonlogo">Camera Shutter Type</div>
+
+<div class="info">
+Shutter: <span id="speedValue">1/60</span>
+</div>
+
+<div class="info">
+Mode: <span id="mode">Mechanical</span>
+</div>
+
+</div>
+
+<div id="sensor">
+
+<div id="scene"></div>
+
+<div id="curtain1" class="curtain"></div>
+<div id="curtain2" class="curtain"></div>
+
+<div id="scanline"></div>
+<div id="flash"></div>
+
+</div>
+
+<div id="bottompanel">
+
+<button onclick="mechanical();setMode('Mechanical')">Mechanical</button>
+<button onclick="efcs();setMode('EFCS')">EFCS</button>
+<button onclick="rolling();setMode('Rolling')">ES (Rolling)</button>
+<button onclick="globalShutter();setMode('Global')">ES (Global)</button>
+
+<br><br>
+
+<input type="range" min="0" max="14" value="8" id="speed">
+
+</div>
+
+<script>
+
+/* security */
+
+document.addEventListener("contextmenu",e=>e.preventDefault());
+
+document.addEventListener("keydown",function(e){
+if(
+e.key==="F12" ||
+(e.ctrlKey && e.shiftKey && e.key==="I") ||
+(e.ctrlKey && e.key==="U")
+){
+e.preventDefault();
+alert("Developer tools disabled");
+}
+});
+
+/* shutter speeds */
+
+const shutterSpeeds=[
+3,2,1,0.5,0.25,0.125,
+1/15,1/30,1/60,1/125,
+1/250,1/500,1/1000,1/2000,1/4000
+];
+
+const shutterLabels=[
+"3s","2s","1s","1/2","1/4","1/8",
+"1/15","1/30","1/60","1/125",
+"1/250","1/500","1/1000","1/2000","1/4000"
+];
+
+let slider=document.getElementById("speed");
+let speedText=document.getElementById("speedValue");
+
+slider.oninput=function(){
+speedText.innerText=shutterLabels[this.value];
+}
+
+function exposureTime(){
+return shutterSpeeds[slider.value]*1000;
+}
+
+/* mode display */
+
+function setMode(name){
+document.getElementById("mode").innerText=name;
+}
+
+/* reset */
+
+function resetCurtains(){
+document.getElementById("curtain1").style.top="-50%";
+document.getElementById("curtain2").style.bottom="-50%";
+}
+
+/* mechanical */
+
+function mechanical(){
+
+let c1=document.getElementById("curtain1");
+let c2=document.getElementById("curtain2");
+
+let speed=exposureTime();
+
+resetCurtains();
+
+let travel=120;
+
+c1.style.transition=travel+"ms linear";
+
+setTimeout(()=>{c1.style.top="0"},10);
+
+setTimeout(()=>{
+c2.style.transition=travel+"ms linear";
+c2.style.bottom="0";
+},speed);
+
+setTimeout(()=>{
+resetCurtains();
+},speed+travel+80);
+
+}
+
+/* EFCS */
+
+function efcs(){
+
+let c2=document.getElementById("curtain2");
+
+let speed=exposureTime();
+
+resetCurtains();
+
+let travel=120;
+
+setTimeout(()=>{
+c2.style.transition=travel+"ms linear";
+c2.style.bottom="0";
+},speed);
+
+setTimeout(()=>{
+resetCurtains();
+},speed+travel+80);
+
+}
+
+/* rolling shutter */
+
+function rolling(){
+
+let scan=document.getElementById("scanline");
+
+scan.style.display="block";
+scan.style.top="0";
+
+let pos=0;
+
+let speed=exposureTime();
+
+let interval=setInterval(()=>{
+
+pos+=3;
+scan.style.top=pos+"px";
+
+if(pos>320){
+clearInterval(interval);
+scan.style.display="none";
+}
+
+},speed/100);
+
+}
+
+/* global shutter */
+
+function globalShutter(){
+
+let flash=document.getElementById("flash");
+
+flash.style.transition="none";
+flash.style.opacity="1";
+
+setTimeout(()=>{
+flash.style.opacity="0";
+},exposureTime());
+
+}
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

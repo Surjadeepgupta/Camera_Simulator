@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Realtime RGB Analyzer</title>
+
+<style>
+body{
+  background:linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+  color:white;
+  font-family:Arial;
+  text-align:center;
+  margin:0;
+}
+
+/* LIVE VIEW FRAME */
+.liveview{
+  width:900px;
+  height:500px;
+  margin:auto;
+  margin-top:20px;
+  border:4px solid #222;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:black;
+}
+
+/* CAMERA + IMAGE */
+video{
+  width:100%;
+  height:100%;
+  object-fit:cover;   /* live view full frame */
+  transform:scaleX(-1);
+}
+
+img{
+  display:none;
+  max-width:100%;
+  max-height:100%;
+}
+
+/* RGB PANEL */
+.panel{
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:rgba(0,0,0,.65);
+  padding:12px;
+  width:220px;
+  font-size:14px;
+}
+
+.bar{
+  height:10px;
+  margin-top:4px;
+}
+
+.r{background:red;}
+.g{background:lime;}
+.b{background:blue;}
+
+.value{
+  margin-top:6px;
+}
+
+.dominant{
+  margin-top:10px;
+  font-size:16px;
+  font-weight:bold;
+}
+
+/* BOTTOM CONTROLS */
+.controls{
+  width:900px;
+  margin:20px auto;
+  display:flex;
+  justify-content:center;
+  gap:15px;
+}
+
+button, input{
+  padding:8px 14px;
+  cursor:pointer;
+  border:none;
+  border-radius:4px;
+  font-weight:bold;
+}
+
+button{
+  background:#111;
+  color:#fff;
+}
+
+input{
+  background:#222;
+  color:#fff;
+}
+</style>
+</head>
+
+<body>
+
+<h2>RGB Simulator</h2>
+
+<div class="liveview">
+  <video id="cam" autoplay playsinline></video>
+  <img id="imgPreview">
+
+  <div class="panel">
+    <div class="value">
+      R <span id="rVal">0</span> (<span id="rPercent">0</span>%)
+      <div class="bar r" id="rBar"></div>
+    </div>
+    <div class="value">
+      G <span id="gVal">0</span> (<span id="gPercent">0</span>%)
+      <div class="bar g" id="gBar"></div>
+    </div>
+    <div class="value">
+      B <span id="bVal">0</span> (<span id="bPercent">0</span>%)
+      <div class="bar b" id="bBar"></div>
+    </div>
+    <div class="dominant">
+      Dominant: <span id="dominantColor">None</span>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button onclick="startCamera()">Live Camera</button>
+  <input type="file" accept="image/*" onchange="loadImage(event)">
+</div>
+
+<script>
+const video = document.getElementById("cam");
+const img = document.getElementById("imgPreview");
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
+let currentSource = "video";
+
+// START CAMERA
+function startCamera(){
+  img.style.display = "none";
+  video.style.display = "block";
+  currentSource = "video";
+
+  navigator.mediaDevices.getUserMedia({video:true})
+  .then(stream=>{
+    video.srcObject = stream;
+    video.onplaying = () => analyzeRGB();
+  });
+}
+
+// LOAD IMAGE
+function loadImage(event){
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    img.src = e.target.result;
+    img.style.display = "block";
+    video.style.display = "none";
+    currentSource = "image";
+
+    img.onload = () => {
+      // Fit image inside liveview while preserving aspect ratio
+      const frameWidth = 900;
+      const frameHeight = 500;
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const frameRatio = frameWidth / frameHeight;
+
+      if(imgRatio > frameRatio){
+        // Wide → fit width
+        img.style.width = "100%";
+        img.style.height = "auto";
+      } else {
+        // Tall → fit height
+        img.style.width = "auto";
+        img.style.height = "100%";
+      }
+
+      analyzeRGB();
+    }
+  }
+  reader.readAsDataURL(file);
+}
+
+// RGB ANALYSIS
+function analyzeRGB(){
+  canvas.width = 160;
+  canvas.height = 120;
+
+  if(currentSource === "video"){
+    ctx.drawImage(video,0,0,160,120);
+  } else {
+    ctx.drawImage(img,0,0,160,120);
+  }
+
+  const frame = ctx.getImageData(0,0,160,120);
+  let r=0, g=0, b=0;
+
+  for(let i=0;i<frame.data.length;i+=4){
+    r += frame.data[i];
+    g += frame.data[i+1];
+    b += frame.data[i+2];
+  }
+
+  const pixels = frame.data.length/4;
+
+  r = Math.floor(r/pixels);
+  g = Math.floor(g/pixels);
+  b = Math.floor(b/pixels);
+
+  const total = r+g+b || 1;
+
+  const rPercent = Math.round((r/total)*100);
+  const gPercent = Math.round((g/total)*100);
+  const bPercent = Math.round((b/total)*100);
+
+  document.getElementById("rVal").innerText = r;
+  document.getElementById("gVal").innerText = g;
+  document.getElementById("bVal").innerText = b;
+
+  document.getElementById("rPercent").innerText = rPercent;
+  document.getElementById("gPercent").innerText = gPercent;
+  document.getElementById("bPercent").innerText = bPercent;
+
+  document.getElementById("rBar").style.width = r+"px";
+  document.getElementById("gBar").style.width = g+"px";
+  document.getElementById("bBar").style.width = b+"px";
+
+  let dominant = "Red";
+  if(g>r && g>b) dominant = "Green";
+  if(b>r && b>g) dominant = "Blue";
+  document.getElementById("dominantColor").innerText = dominant;
+
+  if(currentSource === "video"){
+    requestAnimationFrame(analyzeRGB);
+  }
+}
+
+// AUTO START CAMERA
+startCamera();
+	document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>

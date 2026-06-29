@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Canon Metering Simulation</title>
+
+<style>
+body{
+background:linear-gradient(135deg,#c8102e 0%,#8b0000 45%,#111 100%);
+color:white;
+font-family:Arial;
+text-align:center;
+}
+
+.sensor{
+width:600px;
+height:350px;
+margin:auto;
+margin-top:40px;
+position:relative;
+background:linear-gradient(90deg, red, green, blue);
+border:6px solid #333;
+border-radius:10px;
+overflow:hidden;
+}
+
+.grid{
+position:absolute;
+inset:0;
+background:
+linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+background-size:5px 5px;
+}
+
+.overlay{
+position:absolute;
+inset:0;
+pointer-events:none;
+}
+
+.bracket{
+position:absolute;
+width:40px;
+height:40px;
+border:3px solid white;
+opacity:0.7;
+}
+
+.tl{top:20px;left:20px;border-right:none;border-bottom:none;}
+.tr{top:20px;right:20px;border-left:none;border-bottom:none;}
+.bl{bottom:20px;left:20px;border-right:none;border-top:none;}
+.br{bottom:20px;right:20px;border-left:none;border-top:none;}
+
+.circle{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+border-radius:50%;
+}
+
+.circleBorder{
+border:2px solid white;
+}
+
+/* EVALUATIVE */
+.evalOverlay{
+position:absolute;
+inset:0;
+background:
+radial-gradient(circle at center, rgba(255,255,255,0.28), transparent 60%),
+radial-gradient(circle at 25% 30%, rgba(255,255,255,0.15), transparent 50%),
+radial-gradient(circle at 75% 30%, rgba(255,255,255,0.15), transparent 50%),
+radial-gradient(circle at 30% 75%, rgba(255,255,255,0.12), transparent 50%),
+radial-gradient(circle at 70% 70%, rgba(255,255,255,0.12), transparent 50%);
+}
+
+/* CENTER */
+.centerOverlay{
+position:absolute;
+inset:0;
+background:
+radial-gradient(circle at center, rgba(255,255,255,0.45), transparent 50%),
+radial-gradient(circle at center, rgba(255,255,255,0.15), transparent 85%);
+}
+
+/* PARTIAL */
+.partialOverlay{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:280px;
+height:280px;
+border-radius:50%;
+background:
+radial-gradient(circle,
+rgba(255,255,255,0.25) 0%,
+rgba(255,255,255,0.18) 40%,
+rgba(255,255,255,0.10) 60%,
+rgba(255,255,255,0.05) 75%,
+rgba(255,255,255,0.02) 85%,
+transparent 100%);
+}
+
+/* SPOT */
+.spotOverlay{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+width:80px;
+height:80px;
+border-radius:50%;
+overflow:hidden;
+}
+
+.spotOverlay::before{
+content:"";
+position:absolute;
+inset:0;
+background:
+radial-gradient(circle,
+rgba(255,255,255,0.7) 0%,
+rgba(255,255,255,0.4) 40%,
+rgba(255,255,255,0.15) 70%,
+transparent 100%);
+}
+
+.mode{
+margin-top:20px;
+font-size:20px;
+color:#ff4040;
+}
+
+.status{
+margin-top:10px;
+color:#00ffcc;
+}
+
+.controls{
+margin-top:15px;
+}
+
+button{
+background:#222;
+border:1px solid #555;
+color:white;
+padding:10px 16px;
+margin:5px;
+cursor:pointer;
+}
+
+button:hover{
+background:#444;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Metering Simulation </h2>
+
+<div class="sensor">
+<div class="grid"></div>
+<div class="overlay" id="overlay"></div>
+</div>
+
+<div class="mode" id="modeText">Mode : EVALUATIVE</div>
+<div class="status" id="statusText">Status : Idle</div>
+
+<div class="controls">
+<button onclick="setMode('evaluative')">Evaluative</button>
+<button onclick="setMode('center')">Center Weighted</button>
+<button onclick="setMode('partial')">Partial</button>
+<button onclick="setMode('spot')">Spot</button>
+</div>
+
+<div class="controls">
+<button id="shutterBtn">HALF PRESS SHUTTER(HOLD)</button>
+</div>
+
+<script>
+
+const overlay = document.getElementById("overlay")
+const modeText = document.getElementById("modeText")
+const statusText = document.getElementById("statusText")
+
+let currentMode="evaluative"
+let active=false
+
+function clearOverlay(){
+overlay.innerHTML=""
+}
+
+function addBrackets(){
+["tl","tr","bl","br"].forEach(pos=>{
+let b=document.createElement("div")
+b.className="bracket "+pos
+overlay.appendChild(b)
+})
+}
+
+function draw(){
+
+clearOverlay()
+
+if(currentMode==="evaluative"){
+overlay.appendChild(Object.assign(document.createElement("div"),{className:"evalOverlay"}))
+}
+
+if(currentMode==="center"){
+overlay.appendChild(Object.assign(document.createElement("div"),{className:"centerOverlay"}))
+}
+
+if(currentMode==="partial"){
+overlay.appendChild(Object.assign(document.createElement("div"),{className:"partialOverlay"}))
+}
+
+if(currentMode==="spot"){
+overlay.appendChild(Object.assign(document.createElement("div"),{className:"spotOverlay"}))
+}
+
+/* UI */
+addBrackets()
+
+if(currentMode==="center"){
+let c=document.createElement("div")
+c.className="circle circleBorder"
+c.style.width="180px"
+c.style.height="180px"
+overlay.appendChild(c)
+}
+
+if(currentMode==="partial"){
+let c=document.createElement("div")
+c.className="circle circleBorder"
+c.style.width="140px"
+c.style.height="140px"
+overlay.appendChild(c)
+}
+
+if(currentMode==="spot"){
+let c=document.createElement("div")
+c.className="circle circleBorder"
+c.style.width="80px"
+c.style.height="80px"
+overlay.appendChild(c)
+}
+
+}
+
+function setMode(m){
+currentMode=m
+modeText.innerText="Mode : "+m.toUpperCase()
+if(active) draw()
+}
+
+document.getElementById("shutterBtn").onmousedown=()=>{
+active=true
+statusText.innerText="Status : Metering Active"
+draw()
+}
+
+document.getElementById("shutterBtn").onmouseup=()=>{
+active=false
+statusText.innerText="Status : Idle"
+clearOverlay()
+}
+
+document.getElementById("shutterBtn").onmouseleave=()=>{
+active=false
+statusText.innerText="Status : Idle"
+clearOverlay()
+}
+document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
+
+</script>
+
+</body>
+</html>
