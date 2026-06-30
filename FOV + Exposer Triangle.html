@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Exposure Simulator</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    overflow:hidden;
+    background:#d8d8d8;
+}
+
+h3{
+    text-align:center;
+    padding:10px;
+    background:#fff;
+}
+
+.container{
+    display:flex;
+    width:100%;
+    height:calc(100vh - 50px);
+}
+
+/* ================= MAIN SCENE ================= */
+
+.scene{
+    flex:1;
+    position:relative;
+    overflow:hidden;
+
+    background:
+    linear-gradient(
+        to top,
+        #78b44d 0%,
+        #78b44d 35%,
+        #d8f2ff 35%,
+        #d8f2ff 100%
+    );
+}
+
+/* ================= TREE ================= */
+
+.tree{
+    position:absolute;
+    left:120px;
+    bottom:0;
+
+    height:516px;
+    width:auto;
+
+    object-fit:contain;
+}
+
+/* ================= PERSON ================= */
+
+.person{
+    position:absolute;
+    left:540px;
+    bottom:0;
+
+    height:367px;
+    width:auto;
+
+    object-fit:contain;
+}
+
+/* ================= CAMERA ================= */
+
+.camera{
+    position:absolute;
+
+    right:160px;
+    top:70%;
+
+    transform:translateY(-50%);
+
+    width:230px;
+    height:130px;
+
+    border-radius:20px;
+
+    background:
+    linear-gradient(
+        145deg,
+        #2b2b3b,
+        #111
+    );
+
+    box-shadow:
+    0 10px 20px rgba(0,0,0,0.35);
+}
+
+/* ================= LENS ================= */
+
+.lens{
+    position:absolute;
+
+    left:-1px;
+    top:12px;
+
+    width:130px;
+    height:100px;
+
+    border-radius:60px;
+
+    background:
+    linear-gradient(
+        to right,
+        #000,
+        #1f1f1f,
+        #050505
+    );
+
+    border:5px solid #1a1a1a;
+}
+
+.lens::before{
+    content:"";
+
+    position:absolute;
+
+    left:-18px;
+    top:10px;
+
+    width:42px;
+    height:72px;
+
+    border-radius:50%;
+
+    background:
+    radial-gradient(
+        circle,
+        #4fc3f7,
+        #0d47a1,
+        #000
+    );
+
+    border:4px solid #444;
+}
+
+.lens::after{
+    content:"10-18mm";
+
+    position:absolute;
+
+    right:18px;
+    top:38px;
+
+    color:white;
+
+    font-size:14px;
+    font-weight:bold;
+}
+
+/* ================= LIVE VIEW ================= */
+
+.preview{
+    position:absolute;
+
+    top:20px;
+    right:20px;
+
+    width:637px;
+    height:389px;
+
+    overflow:hidden;
+
+    border:6px solid red;
+
+    background:black;
+
+    box-shadow:
+    0 10px 25px rgba(0,0,0,0.35);
+}
+
+.liveTitle{
+    position:absolute;
+
+    top:10px;
+    left:50%;
+
+    transform:translateX(-50%);
+
+    color:white;
+
+    font-size:22px;
+    font-weight:bold;
+
+    z-index:50;
+}
+
+/* ================= LIVE INNER ================= */
+
+.previewScene{
+    position:absolute;
+
+    inset:0;
+
+    overflow:hidden;
+
+    background:
+    linear-gradient(
+        to top,
+        #78b44d 0%,
+        #78b44d 35%,
+        #d8f2ff 35%,
+        #d8f2ff 100%
+    );
+
+    transform-origin:center center;
+
+    transition:0.08s linear;
+}
+
+/* ================= ISO NOISE ================= */
+
+#noise{
+    position:absolute;
+    inset:0;
+
+    pointer-events:none;
+
+    opacity:0;
+
+    mix-blend-mode:overlay;
+
+    z-index:40;
+}
+
+/* ================= LIVE TREE ================= */
+
+.previewTree{
+    position:absolute;
+
+    left:60px;
+    bottom:0;
+
+    height:403px;
+
+    width:auto;
+
+    object-fit:contain;
+
+    transition:0.08s linear;
+
+    z-index:10;
+}
+
+/* ================= LIVE PERSON ================= */
+
+.previewPerson{
+    position:absolute;
+
+    left:52%;
+    bottom:0;
+
+    height:292px;
+
+    width:auto;
+
+    object-fit:contain;
+
+    transform:translateX(-50%);
+
+    transition:0.08s linear;
+
+    z-index:30;
+
+    filter:blur(0px) !important;
+}
+
+/* ================= CONTROLS ================= */
+
+.controls{
+    width:500px;
+    background:white;
+    padding:28px;
+    border-left:2px solid #ccc;
+    overflow:auto;
+}
+
+.controls h2{
+    margin-bottom:30px;
+}
+
+.group{
+    margin-bottom:35px;
+}
+
+.group label{
+    display:block;
+    margin-bottom:10px;
+    font-weight:bold;
+}
+
+input[type=range]{
+    width:100%;
+}
+
+.value{
+    margin-top:8px;
+    color:#555;
+    font-weight:bold;
+}
+
+/* ================= SCALE LABELS ================= */
+
+.scaleLabels{
+    display:flex;
+    justify-content:space-between;
+
+    margin-top:10px;
+
+    font-size:12px;
+    font-weight:bold;
+
+    color:#333;
+}
+
+/* ================= EXPOSURE BAR ================= */
+
+.meter{
+    margin-top:20px;
+
+    width:100%;
+    height:18px;
+
+    border-radius:10px;
+
+    overflow:hidden;
+
+    background:#ddd;
+}
+
+.meter-fill{
+    height:100%;
+    width:50%;
+
+    background:
+    linear-gradient(
+        to right,
+        #0d47a1,
+        #43a047,
+        #fdd835,
+        #e53935
+    );
+
+    transition:0.08s linear;
+}
+
+.status{
+    margin-top:12px;
+
+    font-weight:bold;
+    color:#333;
+}
+
+/* ================= HISTOGRAM ================= */
+
+.histogramWrap{
+    margin-top:20px;
+
+    background:#111;
+
+    border-radius:10px;
+
+    border:1px solid #444;
+
+    padding:12px;
+}
+
+.histogramContainer{
+    display:flex;
+    align-items:flex-start;
+}
+
+#histogramCanvas{
+    width:100%;
+    height:180px;
+    display:block;
+}
+
+.yAxis{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+
+    height:180px;
+
+    color:#aaa;
+    font-size:11px;
+
+    margin-right:10px;
+}
+
+.histogramLabels{
+    display:flex;
+    justify-content:space-between;
+
+    margin-top:10px;
+
+    color:#ccc;
+    font-size:12px;
+}
+
+.info{
+    margin-top:20px;
+    line-height:1.7;
+    color:#444;
+}
+
+</style>
+</head>
+
+<body>
+
+<h3><b>Field of View + Exposure Triangle</b></h3>
+
+<div class="container">
+
+<!-- ================= SCENE ================= -->
+
+<div class="scene">
+
+<img
+class="tree"
+src="tree.png">
+
+<img
+class="person"
+src="human.png">
+
+<div class="camera">
+<div class="lens"></div>
+</div>
+
+<!-- ================= LIVE VIEW ================= -->
+
+<div class="preview">
+
+<div class="liveTitle">
+LIVE - VIEW
+</div>
+
+<div
+class="previewScene"
+id="previewScene">
+
+<img
+class="previewTree"
+id="previewTree"
+src="tree.png">
+
+<img
+class="previewPerson"
+id="previewPerson"
+src="human.png">
+
+<div id="noise"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ================= CONTROLS ================= -->
+
+<div class="controls">
+
+<h2>Exposure Triangle Simulator</h2>
+
+<!-- FOCAL -->
+
+<div class="group">
+
+<label>Focal Length</label>
+
+<input
+type="range"
+id="focal"
+min="10"
+max="18"
+value="10">
+
+<div
+class="value"
+id="focalValue">
+10mm
+</div>
+
+</div>
+
+<!-- APERTURE -->
+
+<div class="group">
+
+<label>Aperture</label>
+
+<input
+type="range"
+id="aperture"
+min="0"
+max="14"
+step="1"
+value="4">
+
+<div class="scaleLabels">
+
+<span>1.2</span>
+<span>2.8</span>
+<span>5.6</span>
+<span>11</span>
+<span>22</span>
+
+</div>
+
+<div
+class="value"
+id="apertureValue">
+f/2.8
+</div>
+
+</div>
+
+<!-- SHUTTER -->
+
+<div class="group">
+
+<label>Shutter Speed</label>
+
+<input
+type="range"
+id="shutter"
+min="0"
+max="6"
+step="1"
+value="3">
+
+<div class="scaleLabels">
+
+<span>1/15</span>
+<span>1/30</span>
+<span>1/60</span>
+<span>1/125</span>
+<span>1/250</span>
+<span>1/500</span>
+<span>1/1000</span>
+
+</div>
+
+<div
+class="value"
+id="shutterValue">
+1/125s
+</div>
+
+</div>
+
+<!-- ISO -->
+
+<div class="group">
+
+<label>ISO</label>
+
+<input
+type="range"
+id="iso"
+min="0"
+max="7"
+step="1"
+value="1">
+
+<div class="scaleLabels">
+
+<span>50</span>
+<span>100</span>
+<span>200</span>
+<span>400</span>
+<span>800</span>
+<span>1600</span>
+<span>3200</span>
+<span>6400</span>
+
+</div>
+
+<div
+class="value"
+id="isoValue">
+ISO 100
+</div>
+
+</div>
+
+<!-- EXPOSURE BAR -->
+
+<div class="meter">
+
+<div
+class="meter-fill"
+id="meterFill"></div>
+
+</div>
+
+<div
+class="status"
+id="statusText">
+
+Balanced Exposure
+
+</div>
+
+<!-- HISTOGRAM -->
+
+<div class="histogramWrap">
+
+<div class="histogramContainer">
+
+<div class="yAxis">
+
+<span>24M</span>
+<span>18M</span>
+<span>12M</span>
+<span>6M</span>
+<span>0</span>
+
+</div>
+
+<canvas
+id="histogramCanvas"
+width="380"
+height="180">
+</canvas>
+
+</div>
+
+<div class="histogramLabels">
+
+<span>Black</span>
+<span>Shadow</span>
+<span>Midtone</span>
+<span>Highlight</span>
+<span>White</span>
+
+</div>
+
+</div>
+
+<div class="info">
+
+<p><b>Focal Length:</b> changes optical magnification.</p>
+
+<p><b>Aperture:</b> controls depth of field and light.</p>
+
+<p><b>Shutter:</b> changes exposure duration.</p>
+
+<p><b>ISO:</b> amplifies sensor signal and adds grain.</p>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* ================= APERTURE SCALE ================= */
+
+const apertureScale = [
+1.2,1.4,1.8,2,2.8,4,5.6,6.3,7.1,8,11,16,18,20,22
+];
+
+/* ================= SHUTTER SCALE ================= */
+
+const shutterScale = [
+15,30,60,125,250,500,1000
+];
+
+/* ================= ISO SCALE ================= */
+
+const isoScale = [
+50,100,200,400,800,1600,3200,6400
+];
+
+/* ================= ELEMENTS ================= */
+
+const focal = document.getElementById("focal");
+const aperture = document.getElementById("aperture");
+const shutter = document.getElementById("shutter");
+const iso = document.getElementById("iso");
+
+const focalValue = document.getElementById("focalValue");
+const apertureValue = document.getElementById("apertureValue");
+const shutterValue = document.getElementById("shutterValue");
+const isoValue = document.getElementById("isoValue");
+
+const previewScene = document.getElementById("previewScene");
+const previewTree = document.getElementById("previewTree");
+const previewPerson = document.getElementById("previewPerson");
+
+const noise = document.getElementById("noise");
+
+const meterFill = document.getElementById("meterFill");
+const statusText = document.getElementById("statusText");
+
+const histogramCanvas =
+document.getElementById("histogramCanvas");
+
+const ctx =
+histogramCanvas.getContext("2d");
+
+/* ================= HISTOGRAM ================= */
+
+function drawHistogram(exposure, contrast){
+
+ctx.clearRect(0,0,380,180);
+
+ctx.strokeStyle =
+"rgba(255,255,255,0.08)";
+
+for(let i=0;i<5;i++){
+
+let y = i * 45;
+
+ctx.beginPath();
+ctx.moveTo(0,y);
+ctx.lineTo(380,y);
+ctx.stroke();
+
+}
+
+for(let i=0;i<5;i++){
+
+let x = i * 95;
+
+ctx.beginPath();
+ctx.moveTo(x,0);
+ctx.lineTo(x,180);
+ctx.stroke();
+
+}
+
+ctx.beginPath();
+
+ctx.lineWidth = 2.5;
+
+ctx.strokeStyle = "white";
+
+let peak =
+(exposure / 3.5) * 380;
+
+peak =
+Math.max(50,Math.min(330,peak));
+
+for(let x=0;x<=380;x++){
+
+let distance = (x - peak);
+
+let value =
+Math.exp(
+-(distance * distance) /
+(2 * 4200)
+);
+
+value =
+value * (110 * contrast);
+
+let y = 170 - value;
+
+if(x===0){
+
+ctx.moveTo(x,y);
+
+}else{
+
+ctx.lineTo(x,y);
+
+}
+
+}
+
+ctx.stroke();
+
+}
+
+/* ================= UPDATE ================= */
+
+function updateScene(){
+
+/* FOCAL */
+
+let focalLength =
+parseInt(focal.value);
+
+focalValue.innerText =
+focalLength + "mm";
+
+let zoom =
+focalLength / 10;
+
+previewScene.style.transform =
+`scale(${zoom})`;
+
+/* APERTURE */
+
+let apertureIndex =
+parseInt(aperture.value);
+
+let apertureReal =
+apertureScale[apertureIndex];
+
+apertureValue.innerText =
+"f/" + apertureReal;
+
+let apertureLight =
+Math.pow(
+2.8 / apertureReal,
+1.3
+);
+
+/* DEPTH OF FIELD */
+
+let focalBlur =
+(zoom - 1) * 6;
+
+let apertureBlur =
+22 / apertureReal;
+
+let totalBlur =
+apertureBlur + focalBlur;
+
+/* TREE ONLY BLUR */
+
+previewTree.style.filter =
+`blur(${totalBlur}px)`;
+
+/* PERSON ALWAYS SHARP */
+
+previewPerson.style.filter =
+`blur(0px)`;
+
+/* SHUTTER */
+
+let shutterIndex =
+parseInt(shutter.value);
+
+let shutterSpeed =
+shutterScale[shutterIndex];
+
+shutterValue.innerText =
+"1/" + shutterSpeed + "s";
+
+let shutterLight =
+Math.pow(
+125 / shutterSpeed,
+0.7
+);
+
+/* ISO */
+
+let isoIndex =
+parseInt(iso.value);
+
+let isoReal =
+isoScale[isoIndex];
+
+isoValue.innerText =
+"ISO " + isoReal;
+
+let isoGain =
+Math.sqrt(
+isoReal / 100
+);
+
+/* EXPOSURE */
+
+let exposure =
+apertureLight *
+shutterLight *
+isoGain;
+
+exposure =
+Math.max(
+0.25,
+Math.min(3.5, exposure)
+);
+
+/* CONTRAST */
+
+let contrast =
+1.35 - (exposure * 0.16);
+
+contrast =
+Math.max(
+0.7,
+Math.min(1.5, contrast)
+);
+
+/* ISO NOISE */
+
+let noiseAmount =
+(isoReal - 50) / 6350;
+
+let detailLoss =
+1 - (noiseAmount * 0.22);
+
+/* ENTIRE SCENE FILTER */
+
+previewScene.style.filter =
+`
+brightness(${exposure})
+contrast(${contrast})
+saturate(${detailLoss})
+`;
+
+/* ISO GRAIN */
+
+noise.style.opacity =
+noiseAmount * 1.1;
+
+noise.style.backgroundImage =
+`
+radial-gradient(
+rgba(255,255,255,0.45) 0.7px,
+transparent 0.7px),
+
+radial-gradient(
+rgba(0,0,0,0.35) 0.7px,
+transparent 0.7px)
+`;
+
+let grain =
+Math.max(
+1,
+5 - (noiseAmount * 4)
+);
+
+noise.style.backgroundSize =
+`
+${grain}px ${grain}px,
+${grain + 1}px ${grain + 1}px
+`;
+
+/* HISTOGRAM */
+
+drawHistogram(
+exposure,
+contrast
+);
+
+/* METER */
+
+let meter =
+((exposure - 0.25) / 3.25) * 100;
+
+meter =
+Math.max(
+0,
+Math.min(100,meter)
+);
+
+meterFill.style.width =
+meter + "%";
+
+/* STATUS */
+
+if(exposure < 0.8){
+
+statusText.innerText =
+"Underexposed";
+
+}
+
+else if(exposure > 2){
+
+statusText.innerText =
+"Overexposed";
+
+}
+
+else{
+
+statusText.innerText =
+"Balanced Exposure";
+
+}
+
+}
+
+/* EVENTS */
+
+focal.addEventListener(
+"input",
+updateScene
+);
+
+aperture.addEventListener(
+"input",
+updateScene
+);
+
+shutter.addEventListener(
+"input",
+updateScene
+);
+
+iso.addEventListener(
+"input",
+updateScene
+);
+
+/* INITIAL */
+
+updateScene();
+
+</script>
+
+</body>
+</html>
