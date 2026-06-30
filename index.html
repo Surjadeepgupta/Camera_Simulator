@@ -153,6 +153,155 @@ button:hover {
 function openPage(page){
     window.open(page, "_blank");
 }
+	document.addEventListener(
+"contextmenu",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"selectstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"dragstart",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"copy",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"cut",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"paste",
+e=>e.preventDefault()
+);
+
+document.addEventListener(
+"keydown",
+function(e){
+
+const key = e.key.toLowerCase();
+
+if(e.key==="F12"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="u"){
+e.preventDefault();
+}
+
+if(e.ctrlKey && key==="s"){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="i"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="j"
+){
+e.preventDefault();
+}
+
+if(
+e.ctrlKey &&
+e.shiftKey &&
+key==="c"
+){
+e.preventDefault();
+}
+
+}
+);
+
+/* DEVTOOLS */
+
+(function(){
+
+function detectDevTools(){
+
+const widthThreshold =
+window.outerWidth -
+window.innerWidth > 160;
+
+const heightThreshold =
+window.outerHeight -
+window.innerHeight > 160;
+
+if(
+widthThreshold ||
+heightThreshold
+){
+
+document.body.innerHTML = `
+
+<div style="
+width:100vw;
+height:100vh;
+background:black;
+display:flex;
+align-items:center;
+justify-content:center;
+flex-direction:column;
+font-family:Arial;
+color:red;
+">
+
+<div style="
+font-size:38px;
+font-weight:bold;
+margin-bottom:20px;
+">
+
+Developer Tools Blocked
+
+</div>
+
+<div style="
+font-size:16px;
+opacity:0.7;
+">
+
+Source Inspection Disabled
+
+</div>
+
+</div>
+
+`;
+
+}
+
+}
+
+setInterval(
+detectDevTools,
+500
+);
+
+})();
+
+/* CLEAR */
+
+setInterval(function(){
+
+console.clear();
+
+},1000);
 </script>
 
 </body>
