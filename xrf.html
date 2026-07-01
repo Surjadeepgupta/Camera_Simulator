@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Realtime Open Gate Camera Simulator</title>
+
+<style>
+
+/* =========================
+   RESET
+========================= */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#0f0f0f;
+    color:#fff;
+    overflow:hidden;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+
+.app{
+    display:flex;
+    width:100vw;
+    height:100vh;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar{
+    width:320px;
+    background:#1b1b1b;
+    border-right:1px solid #333;
+    padding:20px;
+    overflow-y:auto;
+}
+
+.sidebar h2{
+    margin-bottom:25px;
+    font-size:22px;
+}
+
+.control{
+    margin-bottom:22px;
+}
+
+.control label{
+    display:block;
+    margin-bottom:10px;
+    color:#bbb;
+    font-size:14px;
+}
+
+.control select,
+.control button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    background:#2c2c2c;
+    color:#fff;
+    font-size:15px;
+}
+
+.control button{
+    cursor:pointer;
+}
+
+.record-btn{
+    background:#d50000 !important;
+    font-weight:bold;
+}
+
+.toggle{
+    background:#222;
+    border-radius:10px;
+    padding:14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.toggle input{
+    width:22px;
+    height:22px;
+}
+
+/* =========================
+   PREVIEW
+========================= */
+
+.preview-area{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+    background:#000;
+}
+
+.preview{
+    position:relative;
+    width:92%;
+    max-width:1500px;
+    aspect-ratio:16/9;
+    background:#000;
+    overflow:hidden;
+    border-radius:16px;
+    border:2px solid #444;
+}
+
+video{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    background:#000;
+}
+
+/* =========================
+   GUIDE
+========================= */
+
+.guide{
+    position:absolute;
+    border:2px solid rgba(255,255,255,.95);
+    pointer-events:none;
+    display:none;
+}
+
+/* =========================
+   STATUS
+========================= */
+
+.status{
+    position:absolute;
+    bottom:20px;
+    left:20px;
+    background:rgba(0,0,0,.7);
+    padding:10px 16px;
+    border-radius:10px;
+    font-size:14px;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width:900px){
+
+    body{
+        overflow:auto;
+    }
+
+    .app{
+        flex-direction:column-reverse;
+        height:auto;
+        min-height:100vh;
+    }
+
+    .preview-area{
+        width:100%;
+        height:58vh;
+        position:sticky;
+        top:0;
+        z-index:5;
+        background:#000;
+    }
+
+    .preview{
+        width:100%;
+        height:100%;
+        border-radius:0;
+        border:none;
+        max-width:none;
+        aspect-ratio:auto;
+    }
+
+    .sidebar{
+        width:100%;
+        border-right:none;
+        border-top:1px solid #333;
+        padding:18px;
+    }
+
+}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- CONTROLS -->
+
+    <div class="sidebar">
+
+        <h2>Realtime Open Gate Camera</h2>
+
+        <!-- OPEN GATE -->
+
+        <div class="control">
+
+            <div class="toggle">
+
+                <span>Open Gate</span>
+
+                <input type="checkbox" id="openGate">
+
+            </div>
+
+        </div>
+
+        <!-- ASPECT -->
+
+        <div class="control">
+
+            <label>Secondary Aspect</label>
+
+            <select id="aspect">
+
+                <option value="9:16">
+                    9:16 Vertical
+                </option>
+
+                <option value="1:1">
+                    1:1 Square
+                </option>
+
+                <option value="4:3">
+                    4:3 Standard
+                </option>
+
+            </select>
+
+        </div>
+
+        <!-- ORIENTATION -->
+
+        <div class="control">
+
+            <label>Orientation</label>
+
+            <select id="orientationSelect">
+
+                <option value="auto">
+                    Auto Detect
+                </option>
+
+                <option value="landscape">
+                    Landscape
+                </option>
+
+                <option value="portrait">
+                    Portrait
+                </option>
+
+            </select>
+
+        </div>
+
+        <!-- CAMERA -->
+
+        <div class="control">
+
+            <label>Camera</label>
+
+            <select id="cameraSelect"></select>
+
+        </div>
+
+        <!-- START -->
+
+        <div class="control">
+
+            <button id="startBtn">
+                Start Camera
+            </button>
+
+        </div>
+
+        <!-- RECORD -->
+
+        <div class="control">
+
+            <button
+                id="recordBtn"
+                class="record-btn"
+            >
+                Start Recording
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- PREVIEW -->
+
+    <div class="preview-area">
+
+        <div class="preview">
+
+            <video
+                id="video"
+                autoplay
+                muted
+                playsinline
+            ></video>
+
+            <div
+                class="guide"
+                id="guide"
+            ></div>
+
+        </div>
+
+        <div
+            class="status"
+            id="status"
+        >
+            Camera Idle
+        </div>
+
+    </div>
+
+</div>
+
+<!-- CANVAS -->
+
+<canvas id="masterCanvas" hidden></canvas>
+<canvas id="cropCanvas" hidden></canvas>
+
+<script>
+
+
+
+/* =========================
+   ELEMENTS
+========================= */
+
+const video =
+document.getElementById("video");
+
+const openGate =
+document.getElementById("openGate");
+
+const aspect =
+document.getElementById("aspect");
+
+const guide =
+document.getElementById("guide");
+
+const startBtn =
+document.getElementById("startBtn");
+
+const recordBtn =
+document.getElementById("recordBtn");
+
+const cameraSelect =
+document.getElementById("cameraSelect");
+
+const statusText =
+document.getElementById("status");
+
+const masterCanvas =
+document.getElementById("masterCanvas");
+
+const cropCanvas =
+document.getElementById("cropCanvas");
+
+const orientationSelect =
+document.getElementById(
+    "orientationSelect"
+);
+
+/* =========================
+   VARIABLES
+========================= */
+
+let stream = null;
+
+let masterRecorder = null;
+let cropRecorder = null;
+
+let masterChunks = [];
+let cropChunks = [];
+
+let isRecording = false;
+
+let currentOrientation =
+"landscape";
+
+/* =========================
+   UHD MASTER
+========================= */
+
+const MASTER_W = 3840;
+const MASTER_H = 2160;
+
+/* =========================
+   SECONDARY
+========================= */
+
+let cropSX = 0;
+let cropSY = 0;
+let cropSW = 720;
+let cropSH = 1280;
+
+/* =========================
+   ORIENTATION
+========================= */
+
+function detectOrientation(){
+
+    const selected =
+    orientationSelect.value;
+
+    if(selected === "portrait"){
+
+        currentOrientation =
+        "portrait";
+
+        return;
+
+    }
+
+    if(selected === "landscape"){
+
+        currentOrientation =
+        "landscape";
+
+        return;
+
+    }
+
+    if(window.innerHeight >
+       window.innerWidth){
+
+        currentOrientation =
+        "portrait";
+
+    }else{
+
+        currentOrientation =
+        "landscape";
+
+    }
+
+}
+
+/* =========================
+   GET CAMERAS
+========================= */
+
+async function getCameras(){
+
+    const devices =
+    await navigator.mediaDevices.enumerateDevices();
+
+    const cameras =
+    devices.filter(
+        d => d.kind === "videoinput"
+    );
+
+    cameraSelect.innerHTML = "";
+
+    cameras.forEach((camera,index)=>{
+
+        const option =
+        document.createElement("option");
+
+        option.value =
+        camera.deviceId;
+
+        option.text =
+        camera.label || `Camera ${index+1}`;
+
+        cameraSelect.appendChild(option);
+
+    });
+
+}
+
+/* =========================
+   START CAMERA
+========================= */
+
+async function startCamera(){
+
+    if(stream){
+
+        stream.getTracks().forEach(
+            t => t.stop()
+        );
+
+    }
+
+    try{
+
+        stream =
+        await navigator.mediaDevices.getUserMedia({
+
+            video:{
+
+                width:{ideal:3840},
+                height:{ideal:2160},
+
+                frameRate:{
+                    ideal:30,
+                    max:30
+                },
+
+                facingMode:"environment",
+
+                deviceId:
+                cameraSelect.value
+                ? {
+                    exact:
+                    cameraSelect.value
+                }
+                : undefined
+
+            },
+
+            audio:true
+
+        });
+
+        video.srcObject = stream;
+
+        statusText.innerHTML =
+        "Realtime UHD Camera Active";
+
+        setupCanvas();
+
+        updateGuide();
+
+        startRender();
+
+    }catch(error){
+
+        console.error(error);
+
+        alert("Camera access denied");
+
+    }
+
+}
+
+/* =========================
+   TRUE SECONDARY CROP
+========================= */
+
+function setupCanvas(){
+
+    masterCanvas.width =
+    MASTER_W;
+
+    masterCanvas.height =
+    MASTER_H;
+
+    const mode =
+    aspect.value;
+
+    if(mode === "9:16"){
+
+        cropCanvas.width = 1080;
+        cropCanvas.height = 1920;
+
+        cropSW =
+        MASTER_H * (9/16);
+
+        cropSH =
+        MASTER_H;
+
+    }
+
+    if(mode === "1:1"){
+
+        cropCanvas.width = 1080;
+        cropCanvas.height = 1080;
+
+        cropSW =
+        MASTER_H;
+
+        cropSH =
+        MASTER_H;
+
+    }
+
+    if(mode === "4:3"){
+
+        cropCanvas.width = 1440;
+        cropCanvas.height = 1080;
+
+        cropSH =
+        MASTER_H;
+
+        cropSW =
+        cropSH * (4/3);
+
+    }
+
+    cropSX =
+    (MASTER_W-cropSW)/2;
+
+    cropSY =
+    (MASTER_H-cropSH)/2;
+
+}
+
+/* =========================
+   GUIDE
+========================= */
+
+function updateGuide(){
+
+    if(!openGate.checked){
+
+        guide.style.display =
+        "none";
+
+        return;
+
+    }
+
+    guide.style.display =
+    "block";
+
+    const preview =
+    document.querySelector(
+        ".preview"
+    );
+
+    const previewW =
+    preview.clientWidth;
+
+    const previewH =
+    preview.clientHeight;
+
+    let targetAspect = 9/16;
+
+    if(aspect.value === "1:1"){
+
+        targetAspect = 1;
+
+    }
+
+    if(aspect.value === "4:3"){
+
+        targetAspect = 4/3;
+
+    }
+
+    let guideW =
+    previewH * targetAspect;
+
+    let guideH =
+    previewH;
+
+    if(guideW > previewW){
+
+        guideW = previewW;
+
+        guideH =
+        guideW / targetAspect;
+
+    }
+
+    guide.style.width =
+    guideW + "px";
+
+    guide.style.height =
+    guideH + "px";
+
+    guide.style.left =
+    ((previewW-guideW)/2)
+    + "px";
+
+    guide.style.top =
+    ((previewH-guideH)/2)
+    + "px";
+
+}
+
+/* =========================
+   PERFECT RENDER
+========================= */
+
+function startRender(){
+
+    const masterCtx =
+    masterCanvas.getContext(
+        "2d",
+        {
+            alpha:false,
+            colorSpace:"display-p3"
+        }
+    );
+
+    const cropCtx =
+    cropCanvas.getContext(
+        "2d",
+        {
+            alpha:false,
+            colorSpace:"display-p3"
+        }
+    );
+
+    function render(){
+
+        const videoW =
+        video.videoWidth;
+
+        const videoH =
+        video.videoHeight;
+
+        if(!videoW || !videoH){
+
+            video.requestVideoFrameCallback(
+                render
+            );
+
+            return;
+
+        }
+
+        masterCtx.clearRect(
+            0,
+            0,
+            MASTER_W,
+            MASTER_H
+        );
+
+        /* =========================
+           FIT ENTIRE CAMERA
+           NO DISTORTION
+           NO ZOOM
+        ========================== */
+
+        const sourceAspect =
+        videoW / videoH;
+
+        const targetAspect =
+        MASTER_W / MASTER_H;
+
+        let drawW;
+        let drawH;
+
+        if(sourceAspect > targetAspect){
+
+            drawW =
+            MASTER_W;
+
+            drawH =
+            drawW / sourceAspect;
+
+        }else{
+
+            drawH =
+            MASTER_H;
+
+            drawW =
+            drawH * sourceAspect;
+
+        }
+
+        const dx =
+        (MASTER_W - drawW) / 2;
+
+        const dy =
+        (MASTER_H - drawH) / 2;
+
+        /* =========================
+           DRAW CAMERA
+        ========================== */
+
+        masterCtx.save();
+
+        /* mirror correction */
+
+        masterCtx.translate(
+            MASTER_W,
+            0
+        );
+
+        masterCtx.scale(-1,1);
+
+        masterCtx.drawImage(
+
+            video,
+
+            0,
+            0,
+            videoW,
+            videoH,
+
+            dx,
+            dy,
+
+            drawW,
+            drawH
+
+        );
+
+        masterCtx.restore();
+
+        /* =========================
+           SECONDARY OUTPUT
+        ========================== */
+
+        if(openGate.checked){
+
+            cropCtx.clearRect(
+
+                0,
+                0,
+
+                cropCanvas.width,
+                cropCanvas.height
+
+            );
+
+            cropCtx.drawImage(
+
+                masterCanvas,
+
+                cropSX,
+                cropSY,
+                cropSW,
+                cropSH,
+
+                0,
+                0,
+
+                cropCanvas.width,
+                cropCanvas.height
+
+            );
+
+        }
+
+        video.requestVideoFrameCallback(
+            render
+        );
+
+    }
+
+    video.requestVideoFrameCallback(
+        render
+    );
+
+}
+
+/* =========================
+   RECORDING
+========================= */
+
+function startRecording(){
+
+    if(!stream){
+
+        alert("Start camera first");
+        return;
+
+    }
+
+    masterChunks = [];
+    cropChunks = [];
+
+    const masterStream =
+    masterCanvas.captureStream(30);
+
+    masterRecorder =
+    new MediaRecorder(
+
+        masterStream,
+
+        {
+            mimeType:
+            "video/webm;codecs=vp9",
+
+            videoBitsPerSecond:
+            80000000
+        }
+
+    );
+
+    masterRecorder.ondataavailable =
+    e=>{
+
+        if(e.data.size > 0){
+
+            masterChunks.push(e.data);
+
+        }
+
+    };
+
+    masterRecorder.start();
+
+    if(openGate.checked){
+
+        const cropStream =
+        cropCanvas.captureStream(30);
+
+        cropRecorder =
+        new MediaRecorder(
+
+            cropStream,
+
+            {
+                mimeType:
+                "video/webm;codecs=vp9",
+
+                videoBitsPerSecond:
+                30000000
+            }
+
+        );
+
+        cropRecorder.ondataavailable =
+        e=>{
+
+            if(e.data.size > 0){
+
+                cropChunks.push(e.data);
+
+            }
+
+        };
+
+        cropRecorder.start();
+
+    }
+
+    isRecording = true;
+
+    recordBtn.innerHTML =
+    "Stop Recording";
+
+    statusText.innerHTML =
+    openGate.checked
+    ? "Recording UHD + Secondary"
+    : "Recording UHD";
+
+}
+
+/* =========================
+   STOP RECORDING
+========================= */
+
+function stopRecording(){
+
+    statusText.innerHTML =
+    "Processing Videos...";
+
+    let masterReady = false;
+    let cropReady = false;
+
+    let masterBlob = null;
+    let cropBlob = null;
+
+    masterRecorder.onstop = ()=>{
+
+        masterBlob =
+        new Blob(masterChunks,{
+            type:"video/webm"
+        });
+
+        masterReady = true;
+
+        checkAndSave();
+
+    };
+
+    if(openGate.checked){
+
+        cropRecorder.onstop = ()=>{
+
+            cropBlob =
+            new Blob(cropChunks,{
+                type:"video/webm"
+            });
+
+            cropReady = true;
+
+            checkAndSave();
+
+        };
+
+    }else{
+
+        cropReady = true;
+
+    }
+
+    masterRecorder.stop();
+
+    if(openGate.checked){
+
+        cropRecorder.stop();
+
+    }
+
+    isRecording = false;
+
+    recordBtn.innerHTML =
+    "Start Recording";
+
+    function checkAndSave(){
+
+        if(masterReady && cropReady){
+
+            downloadBlob(
+                masterBlob,
+                "UHD_MASTER"
+            );
+
+            if(openGate.checked){
+
+                setTimeout(()=>{
+
+                    downloadBlob(
+
+                        cropBlob,
+
+                        aspect.value
+                            .replace(":","x")
+
+                    );
+
+                    statusText.innerHTML =
+                    "Both Videos Saved";
+
+                },1200);
+
+            }else{
+
+                statusText.innerHTML =
+                "UHD Video Saved";
+
+            }
+
+        }
+
+    }
+
+}
+
+/* =========================
+   DOWNLOAD
+========================= */
+
+function downloadBlob(blob,name){
+
+    const url =
+    URL.createObjectURL(blob);
+
+    const a =
+    document.createElement("a");
+
+    a.style.display =
+    "none";
+
+    a.href = url;
+
+    a.download =
+    `${name}_${Date.now()}.webm`;
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    setTimeout(()=>{
+
+        URL.revokeObjectURL(url);
+
+        document.body.removeChild(a);
+
+    },1000);
+
+}
+
+/* =========================
+   EVENTS
+========================= */
+
+window.addEventListener(
+    "resize",
+    ()=>{
+
+        detectOrientation();
+
+        updateGuide();
+
+    }
+);
+
+orientationSelect.addEventListener(
+    "change",
+    detectOrientation
+);
+
+startBtn.addEventListener(
+    "click",
+    startCamera
+);
+
+openGate.addEventListener(
+    "change",
+    updateGuide
+);
+
+aspect.addEventListener(
+    "change",
+    ()=>{
+
+        setupCanvas();
+
+        updateGuide();
+
+    }
+);
+
+recordBtn.addEventListener(
+    "click",
+    ()=>{
+
+        if(!isRecording){
+
+            startRecording();
+
+        }else{
+
+            stopRecording();
+
+        }
+
+    }
+);
+
+/* =========================
+   INIT
+========================= */
+
+detectOrientation();
+
+getCameras();
+
+updateGuide();
+
+
+</script>
+
+</body>
+</html>
